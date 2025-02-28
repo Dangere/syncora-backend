@@ -3,10 +3,12 @@ using TaskManagementWebAPI.Models.DTOs.Entities;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
 
 // Register AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
+
+var app = builder.Build();
+
 
 //mimicking database rows
 List<TaskEntity> tasks =
