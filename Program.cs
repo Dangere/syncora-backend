@@ -4,13 +4,14 @@ using TaskManagementWebAPI.Models.DTOs.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register AutoMapper
+//Register AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
+string GetTaskEndpointName = "GetTask";
 
 var app = builder.Build();
 
 
-//mimicking database rows
+//Mimicking database rows
 List<TaskEntity> tasks =
 [
  new TaskEntity(1,1002, "Task 1", "Description 1", true, DateTime.Parse("2023-01-01"), null),
@@ -38,7 +39,7 @@ app.MapGet("/tasks", (IMapper mapper) =>
 app.MapGet("/tasks/{id}", (int id) =>
 {
     return tasks.Where(task => task.Id == id);
-}).WithName("GetTask");
+}).WithName(GetTaskEndpointName);
 
 //POST /tasks
 app.MapPost("/tasks", (CreateTaskDTO newTask) =>
@@ -47,7 +48,19 @@ app.MapPost("/tasks", (CreateTaskDTO newTask) =>
     TaskEntity createdTask = new(newId, newTask.UserId, newTask.Title, newTask.Description, false, DateTime.Now, null);
     tasks.Add(createdTask);
 
-    return Results.CreatedAtRoute("GetTask", new { id = createdTask.Id }, createdTask);
+    return Results.CreatedAtRoute(GetTaskEndpointName, new { id = createdTask.Id }, createdTask);
+});
+
+app.MapPut("/tasks/{id}", (int id, UpdateTaskDTO updatedTaskDTO) =>
+{
+    if (tasks[id] == null)
+        return Results.NotFound();
+
+    TaskEntity currentTask = tasks[id];
+    TaskEntity updatedTask = currentTask with { Title = updatedTaskDTO.NewTitle ?? currentTask.Title, Description = updatedTaskDTO.NewDescription ?? currentTask.Description, Completed = updatedTaskDTO.Completed ?? currentTask.Completed };
+
+    tasks[id] = updatedTask;
+    return Results.Ok(updatedTask);
 });
 
 
