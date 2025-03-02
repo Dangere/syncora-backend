@@ -51,17 +51,33 @@ app.MapPost("/tasks", (CreateTaskDTO newTask) =>
     return Results.CreatedAtRoute(GetTaskEndpointName, new { id = createdTask.Id }, createdTask);
 });
 
+//PUT /tasks/1
 app.MapPut("/tasks/{id}", (int id, UpdateTaskDTO updatedTaskDTO) =>
 {
-    if (tasks[id] == null)
+    if (tasks.Count < id)
         return Results.NotFound();
 
-    TaskEntity currentTask = tasks[id];
-    TaskEntity updatedTask = currentTask with { Title = updatedTaskDTO.NewTitle ?? currentTask.Title, Description = updatedTaskDTO.NewDescription ?? currentTask.Description, Completed = updatedTaskDTO.Completed ?? currentTask.Completed };
+    TaskEntity currentTask = tasks[id - 1];
+    TaskEntity updatedTask = currentTask with { Title = updatedTaskDTO.NewTitle ?? currentTask.Title, Description = updatedTaskDTO.NewDescription ?? currentTask.Description, Completed = updatedTaskDTO.Completed ?? currentTask.Completed, };
 
-    tasks[id] = updatedTask;
+    if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+        updatedTask = updatedTask with { UpdatedAt = DateTime.Now };
+
+
+    tasks[id - 1] = updatedTask;
     return Results.Ok(updatedTask);
 });
+
+//DELETE /tasks/1
+app.MapDelete("/tasks/{id}", (int id) =>
+{
+    if (tasks.Count < id)
+        return Results.NotFound();
+
+    tasks.RemoveAt(id - 1);
+    return Results.Ok();
+});
+
 
 
 app.Run();
