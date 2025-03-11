@@ -1,5 +1,5 @@
 using AutoMapper;
-using TaskManagementWebAPI.Models.DTOs.Entities;
+using TaskManagementWebAPI.Models.Entities;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 
 namespace TaskManagementWebAPI.Services;

@@ -1,0 +1,25 @@
+###
+GET http://localhost:5292/api/tasks
+
+###
+POST http://localhost:5292/api/tasks
+Content-Type: application/json
+ 
+{
+    "Title": "New task",
+    "Description": "New description",
+    "UserId": 222
+}
+
+###
+PUT  http://localhost:5292/api/tasks/4
+Content-Type: application/json
+ 
+{
+    "Completed": false,
+    "NewTitle": "New boyydyy",
+    "NewDescription": "New HELLO"
+}
+
+###
+DELETE  http://localhost:5292/api/tasks/3
