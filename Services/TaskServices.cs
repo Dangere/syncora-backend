@@ -8,10 +8,10 @@ public class TaskServices(IMapper mapper)
     private readonly IMapper _mapper = mapper;
 
     public List<TaskEntity> Tasks = [
-        new TaskEntity(1,1002, "Task 1", "Description 1", true, DateTime.Parse("2023-01-01"), null),
-        new TaskEntity(2,1002, "Task 2", "Description 2", false, DateTime.Parse("2023-01-01"), null),
-        new TaskEntity(3,1000, "Task 3", "Description 3", false, DateTime.Parse("2023-01-01"), null),
-        new TaskEntity(4,1000, "Task 4", "Description 4", true, DateTime.Parse("2023-01-01"), DateTime.Parse("2023-01-02")),
+        // new TaskEntity(1,1002, "Task 1", "Description 1", true, DateTime.Parse("2023-01-01"), null),
+        // new TaskEntity(2,1002, "Task 2", "Description 2", false, DateTime.Parse("2023-01-01"), null),
+        // new TaskEntity(3,1000, "Task 3", "Description 3", false, DateTime.Parse("2023-01-01"), null),
+        // new TaskEntity(4,1000, "Task 4", "Description 4", true, DateTime.Parse("2023-01-01"), DateTime.Parse("2023-01-02")),
     ];
 
     public List<TaskDTO> GetTaskDTOs()
@@ -42,28 +42,31 @@ public class TaskServices(IMapper mapper)
 
     public TaskDTO CreateTask(CreateTaskDTO newTaskDTO)
     {
-        int newId = NewGeneratedId();
-        TaskEntity createdTask = new(newId, newTaskDTO.UserId, newTaskDTO.Title, newTaskDTO.Description, false, DateTime.Now, null);
-        Tasks.Add(createdTask);
+        // int newId = NewGeneratedId();
+        // TaskEntity createdTask = new(newId, newTaskDTO.UserId, newTaskDTO.Title, newTaskDTO.Description, false, DateTime.Now, null);
+        // Tasks.Add(createdTask);
 
-        return _mapper.Map<TaskDTO>(createdTask);
+        // return _mapper.Map<TaskDTO>(createdTask);
+
+        throw new NotImplementedException();
     }
     public bool UpdateTask(int id, UpdateTaskDTO updatedTaskDTO)
     {
 
-        TaskEntity? task = GetTaskEntity(id);
-        if (task == null)
-            return false;
+        // TaskEntity? task = GetTaskEntity(id);
+        // if (task == null)
+        //     return false;
 
-        TaskEntity updatedTask = task with { Title = updatedTaskDTO.NewTitle ?? task.Title, Description = updatedTaskDTO.NewDescription ?? task.Description, Completed = updatedTaskDTO.Completed ?? task.Completed, };
+        // TaskEntity updatedTask = task with { Title = updatedTaskDTO.NewTitle ?? task.Title, Description = updatedTaskDTO.NewDescription ?? task.Description, Completed = updatedTaskDTO.Completed ?? task.Completed, };
 
-        if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-            updatedTask = updatedTask with { UpdatedAt = DateTime.Now };
+        // if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+        //     updatedTask = updatedTask with { UpdatedAt = DateTime.Now };
 
-        int taskIndex = Tasks.IndexOf(task);
-        Tasks[taskIndex] = updatedTask;
+        // int taskIndex = Tasks.IndexOf(task);
+        // Tasks[taskIndex] = updatedTask;
 
-        return true;
+        // return true;
+        throw new NotImplementedException();
     }
 
     public bool RemoveTask(int id)
