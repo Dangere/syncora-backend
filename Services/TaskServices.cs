@@ -1,86 +1,85 @@
 using AutoMapper;
 using TaskManagementWebAPI.Models.Entities;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
+using TaskManagementWebAPI.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace TaskManagementWebAPI.Services;
-public class TaskServices(IMapper mapper)
+public class TaskServices(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;
+    private readonly SyncoraDbContext _dbContext = dbContext;
 
-    public List<TaskEntity> Tasks = [
-        // new TaskEntity(1,1002, "Task 1", "Description 1", true, DateTime.Parse("2023-01-01"), null),
-        // new TaskEntity(2,1002, "Task 2", "Description 2", false, DateTime.Parse("2023-01-01"), null),
-        // new TaskEntity(3,1000, "Task 3", "Description 3", false, DateTime.Parse("2023-01-01"), null),
-        // new TaskEntity(4,1000, "Task 4", "Description 4", true, DateTime.Parse("2023-01-01"), DateTime.Parse("2023-01-02")),
-    ];
 
-    public List<TaskDTO> GetTaskDTOs()
+    public async Task<List<TaskDTO>> GetTaskDTOs()
     {
-        List<TaskDTO> taskDTOs = [];
-        foreach (TaskEntity task in Tasks)
-        {
-            taskDTOs.Add(_mapper.Map<TaskDTO>(task));
-        }
+        // List<TaskDTO> taskDTOs = [];
 
-        return taskDTOs;
+        //this will load all entities into memory just to filter through them (bad approach)
+        // await _dbContext.Tasks.ForEachAsync(t => taskDTOs.Add(_mapper.Map<TaskDTO>(t)));
+
+
+        //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
+        return await _dbContext.Tasks.Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
     }
 
-    public TaskDTO? GetTaskDTO(int id)
+    public async Task<TaskDTO?> GetTaskDTO(int id)
     {
-        TaskEntity? taskEntity = GetTaskEntity(id);
+        TaskEntity? taskEntity = await GetTaskEntity(id);
         if (taskEntity == null)
             return null;
 
         return _mapper.Map<TaskDTO>(taskEntity);
     }
 
-    public TaskEntity? GetTaskEntity(int id)
+    public async Task<TaskEntity?> GetTaskEntity(int id)
     {
 
-        return Tasks.Where(task => task.Id == id).FirstOrDefault();
+        return await _dbContext.Tasks.FindAsync(id);
     }
 
-    public TaskDTO CreateTask(CreateTaskDTO newTaskDTO)
+    public async Task<TaskDTO> CreateTask(CreateTaskDTO newTaskDTO)
     {
-        // int newId = NewGeneratedId();
-        // TaskEntity createdTask = new(newId, newTaskDTO.UserId, newTaskDTO.Title, newTaskDTO.Description, false, DateTime.Now, null);
-        // Tasks.Add(createdTask);
 
-        // return _mapper.Map<TaskDTO>(createdTask);
+        TaskEntity createdTask = new() { Title = newTaskDTO.Title, CreatedDate = DateTime.Now, OwnerUserId = newTaskDTO.OwnerId };
 
-        throw new NotImplementedException();
+        await _dbContext.Tasks.AddAsync(createdTask);
+        await _dbContext.SaveChangesAsync();
+
+        return _mapper.Map<TaskDTO>(createdTask);
     }
-    public bool UpdateTask(int id, UpdateTaskDTO updatedTaskDTO)
+    public async Task<bool> UpdateTaskAsync(int id, UpdateTaskDTO updatedTaskDTO)
     {
 
-        // TaskEntity? task = GetTaskEntity(id);
-        // if (task == null)
-        //     return false;
+        TaskEntity? task = await GetTaskEntity(id);
 
-        // TaskEntity updatedTask = task with { Title = updatedTaskDTO.NewTitle ?? task.Title, Description = updatedTaskDTO.NewDescription ?? task.Description, Completed = updatedTaskDTO.Completed ?? task.Completed, };
+        if (task == null)
+            return false;
 
-        // if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-        //     updatedTask = updatedTask with { UpdatedAt = DateTime.Now };
+        task.Title = updatedTaskDTO.NewTitle ?? task.Title;
+        task.Description = updatedTaskDTO.NewDescription ?? task.Description;
+        task.Completed = updatedTaskDTO.Completed ?? task.Completed;
 
-        // int taskIndex = Tasks.IndexOf(task);
-        // Tasks[taskIndex] = updatedTask;
+        if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+            task.UpdatedDate = DateTime.Now;
 
-        // return true;
-        throw new NotImplementedException();
+        await _dbContext.SaveChangesAsync();
+
+        return true;
     }
 
-    public bool RemoveTask(int id)
+    public async Task<bool> RemoveTask(int id)
     {
+        TaskEntity? task = await GetTaskEntity(id);
 
-        int taskIndex = Tasks.RemoveAll(task => task.Id == id);
+        if (task == null)
+            return false;
+
+
+        _dbContext.Tasks.Remove(task);
+        await _dbContext.SaveChangesAsync();
 
         return true;
 
     }
-
-    public int NewGeneratedId()
-    {
-        return Tasks.Count;
-    }
-
 }

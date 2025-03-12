@@ -31,43 +31,43 @@ public class TaskController(TaskServices taskServices, IMapper mapper) : Control
     }
 
 
-    //POST /tasks
-    [HttpPost]
-    public IActionResult PostTask([FromBody] CreateTaskDTO newTask)
-    {
-        Console.WriteLine("Posting");
+    // //POST /tasks
+    // [HttpPost]
+    // public IActionResult PostTask([FromBody] CreateTaskDTO newTask)
+    // {
+    //     Console.WriteLine("Posting");
 
-        TaskDTO createdTask = _taskServices.CreateTask(newTask);
+    //     TaskDTO createdTask = _taskServices.CreateTask(newTask);
 
-        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
-    }
+    //     return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
+    // }
 
-    //PUT /tasks/id
-    [HttpPut("{id}")]
-    public IActionResult UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
-    {
-        Console.WriteLine("Updating");
+    // //PUT /tasks/id
+    // [HttpPut("{id}")]
+    // public IActionResult UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
+    // {
+    //     Console.WriteLine("Updating");
 
-        bool updatedTask = _taskServices.UpdateTask(id, updatedTaskDTO);
+    //     bool updatedTask = _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
 
-        if (updatedTask)
-            return NoContent();
-        else
-            return NotFound();
+    //     if (updatedTask)
+    //         return NoContent();
+    //     else
+    //         return NotFound();
 
-    }
+    // }
 
 
 
-    //DELETE /tasks/1
-    [HttpDelete("{id}")]
-    public IActionResult DeleteTask(int id)
-    {
-        Console.WriteLine("Deleting");
-        _taskServices.RemoveTask(id);
-        return NoContent();
+    // //DELETE /tasks/1
+    // [HttpDelete("{id}")]
+    // public IActionResult DeleteTask(int id)
+    // {
+    //     Console.WriteLine("Deleting");
+    //     _taskServices.RemoveTask(id);
+    //     return NoContent();
 
-    }
+    // }
 
 
 

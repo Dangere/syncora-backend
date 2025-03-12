@@ -9,8 +9,7 @@ namespace TaskManagementWebAPI.Models.Entities;
 [Table("tasks", Schema = "public")]
 public class TaskEntity
 {
-
-    public required int Id { get; set; }
+    public int Id { get; set; }
 
     [Required]
     public required string Title { get; set; }
@@ -20,14 +19,15 @@ public class TaskEntity
     public bool Completed { get; set; } = false;
 
     [Required]
-    public required DateTime CreatedDate { get; set; } = DateTime.Now;
+    public required DateTime CreatedDate { get; set; }
 
     public DateTime? UpdatedDate { get; set; }
 
+    // Using HashSet to avoid duplicate TaskEntity instances in memory.
     // Foreign key pointing to User
     [Required]
-    public int OwnerUserId { get; set; }
-    public required UserEntity OwnerUser { get; set; }
+    public required int OwnerUserId { get; set; }
+    public UserEntity OwnerUser { get; set; } = null!;
 
     public HashSet<UserEntity> SharedUsers { get; } = [];
 }
