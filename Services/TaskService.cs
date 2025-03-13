@@ -5,7 +5,7 @@ using TaskManagementWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace TaskManagementWebAPI.Services;
-public class TaskServices(IMapper mapper, SyncoraDbContext dbContext)
+public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
@@ -20,7 +20,7 @@ public class TaskServices(IMapper mapper, SyncoraDbContext dbContext)
 
 
         //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
-        return await _dbContext.Tasks.Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+        return await _dbContext.Tasks.AsNoTracking().Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
     }
 
     public async Task<TaskDTO?> GetTaskDTO(int id)
@@ -40,11 +40,16 @@ public class TaskServices(IMapper mapper, SyncoraDbContext dbContext)
 
     public async Task<TaskDTO> CreateTask(CreateTaskDTO newTaskDTO)
     {
-
-        TaskEntity createdTask = new() { Title = newTaskDTO.Title, CreatedDate = DateTime.Now, OwnerUserId = newTaskDTO.OwnerId };
+        //change from UTC time to region specific time
+        TaskEntity createdTask = new() { Title = newTaskDTO.Title, CreationDate = DateTime.UtcNow, OwnerUserId = newTaskDTO.OwnerId };
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
+
+        // TaskDTO taskDTO = new TaskDTO(createdTask.Id, createdTask.Title, createdTask.Description, createdTask.Completed, createdTask.CreationDate, createdTask.LastUpdateDate);
+
+        // return taskDTO;
+
 
         return _mapper.Map<TaskDTO>(createdTask);
     }
@@ -61,7 +66,7 @@ public class TaskServices(IMapper mapper, SyncoraDbContext dbContext)
         task.Completed = updatedTaskDTO.Completed ?? task.Completed;
 
         if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-            task.UpdatedDate = DateTime.Now;
+            task.LastUpdateDate = DateTime.Now;
 
         await _dbContext.SaveChangesAsync();
 

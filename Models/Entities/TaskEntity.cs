@@ -19,9 +19,9 @@ public class TaskEntity
     public bool Completed { get; set; } = false;
 
     [Required]
-    public required DateTime CreatedDate { get; set; }
+    public required DateTime CreationDate { get; set; }
 
-    public DateTime? UpdatedDate { get; set; }
+    public DateTime? LastUpdateDate { get; set; }
 
     // Using HashSet to avoid duplicate TaskEntity instances in memory.
     // Foreign key pointing to User

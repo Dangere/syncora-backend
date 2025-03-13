@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
@@ -6,11 +7,10 @@ using TaskManagementWebAPI.Services;
 namespace TaskManagementWebAPI.Controllers;
 
 [ApiController]
-[Route("api/tasks")]
-public class TaskController(TaskServices taskServices, IMapper mapper) : ControllerBase
+[Route("api/[controller]")]
+public class TasksController(TaskService taskServices) : ControllerBase
 {
-    private readonly TaskServices _taskServices = taskServices;
-    private readonly IMapper _mapper = mapper;
+    private readonly TaskService _taskServices = taskServices;
 
     private const string _getTaskEndpointName = "GetTask";
 
@@ -25,49 +25,54 @@ public class TaskController(TaskServices taskServices, IMapper mapper) : Control
 
     //GET /tasks/1
     [HttpGet("{id}", Name = _getTaskEndpointName)]
-    public IActionResult GetTask(int id)
+    public async Task<IActionResult> GetTask(int id)
     {
-        return Ok(_taskServices.GetTaskDTO(id));
+        TaskDTO? task = await _taskServices.GetTaskDTO(id);
+
+        if (task == null)
+            return NotFound();
+        else
+            return Ok(task);
     }
 
 
-    // //POST /tasks
-    // [HttpPost]
-    // public IActionResult PostTask([FromBody] CreateTaskDTO newTask)
-    // {
-    //     Console.WriteLine("Posting");
+    //POST /tasks
+    [HttpPost]
+    public async Task<IActionResult> PostTask([FromBody] CreateTaskDTO newTask)
+    {
+        Console.WriteLine("Posting");
 
-    //     TaskDTO createdTask = _taskServices.CreateTask(newTask);
+        TaskDTO createdTask = await _taskServices.CreateTask(newTask);
 
-    //     return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
-    // }
+        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
+    }
 
-    // //PUT /tasks/id
-    // [HttpPut("{id}")]
-    // public IActionResult UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
-    // {
-    //     Console.WriteLine("Updating");
+    //PUT /tasks/id
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
+    {
+        Console.WriteLine("Updating");
 
-    //     bool updatedTask = _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
+        bool updatedTask = await _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
 
-    //     if (updatedTask)
-    //         return NoContent();
-    //     else
-    //         return NotFound();
+        if (updatedTask)
+            return NoContent();
+        else
+            return NotFound();
 
-    // }
+    }
 
 
 
-    // //DELETE /tasks/1
-    // [HttpDelete("{id}")]
-    // public IActionResult DeleteTask(int id)
-    // {
-    //     Console.WriteLine("Deleting");
-    //     _taskServices.RemoveTask(id);
-    //     return NoContent();
+    //DELETE /tasks/1
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTask(int id)
+    {
+        Console.WriteLine("Deleting");
+        await _taskServices.RemoveTask(id);
+        return NoContent();
 
-    // }
+    }
 
 
 

@@ -10,8 +10,8 @@ builder.Services.AddAutoMapper(typeof(Program));
 //Add controllers, Lifecycle: Transient but behaves like scoped because it gets created per HTTP request
 builder.Services.AddControllers();
 
-//Add TaskServices, Lifecycle: Scoped
-builder.Services.AddScoped<TaskServices>();
+//Add TaskService, Lifecycle: Scoped
+builder.Services.AddScoped<TaskService>();
 
 //Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
