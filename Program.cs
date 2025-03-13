@@ -7,13 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 //Register AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
-//Add controllers
+//Add controllers, Lifecycle: Transient but behaves like scoped because it gets created per HTTP request
 builder.Services.AddControllers();
 
-//Add TaskServices
-builder.Services.AddSingleton<TaskServices>();
+//Add TaskServices, Lifecycle: Scoped
+builder.Services.AddScoped<TaskServices>();
 
-//Add DbContext to the services
+//Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
