@@ -17,9 +17,9 @@ public class TasksController(TaskService taskServices) : ControllerBase
 
     //GET /tasks
     [HttpGet]
-    public IActionResult GetTasks()
+    public async Task<IActionResult> GetTasks()
     {
-        return Ok(_taskServices.GetTaskDTOs());
+        return Ok(await _taskServices.GetTaskDTOs());
     }
 
 
@@ -40,8 +40,6 @@ public class TasksController(TaskService taskServices) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> PostTask([FromBody] CreateTaskDTO newTask)
     {
-        Console.WriteLine("Posting");
-
         TaskDTO createdTask = await _taskServices.CreateTask(newTask);
 
         return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
@@ -51,7 +49,6 @@ public class TasksController(TaskService taskServices) : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
     {
-        Console.WriteLine("Updating");
 
         bool updatedTask = await _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
 
@@ -68,14 +65,13 @@ public class TasksController(TaskService taskServices) : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        Console.WriteLine("Deleting");
-        await _taskServices.RemoveTask(id);
-        return NoContent();
+        bool deleted = await _taskServices.RemoveTask(id);
+
+        if (deleted)
+            return NoContent();
+        else
+            return NotFound();
+
 
     }
-
-
-
-
-
 }

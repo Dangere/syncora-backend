@@ -13,14 +13,12 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
     public async Task<List<TaskDTO>> GetTaskDTOs()
     {
-        // List<TaskDTO> taskDTOs = [];
-
         //this will load all entities into memory just to filter through them (bad approach)
         // await _dbContext.Tasks.ForEachAsync(t => taskDTOs.Add(_mapper.Map<TaskDTO>(t)));
 
 
         //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
-        return await _dbContext.Tasks.AsNoTracking().Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+        return await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.Id).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
     }
 
     public async Task<TaskDTO?> GetTaskDTO(int id)
@@ -46,11 +44,6 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
 
-        // TaskDTO taskDTO = new TaskDTO(createdTask.Id, createdTask.Title, createdTask.Description, createdTask.Completed, createdTask.CreationDate, createdTask.LastUpdateDate);
-
-        // return taskDTO;
-
-
         return _mapper.Map<TaskDTO>(createdTask);
     }
     public async Task<bool> UpdateTaskAsync(int id, UpdateTaskDTO updatedTaskDTO)
@@ -66,7 +59,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         task.Completed = updatedTaskDTO.Completed ?? task.Completed;
 
         if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-            task.LastUpdateDate = DateTime.Now;
+            task.LastUpdateDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 
