@@ -20,7 +20,10 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     // We are ignoring this for the sake of simplicity until we implement the OpenID Connect flow or OAuth standard flow.
     public async Task<LoginResponseDTO?> LoginWithEmailAndPassword(string email, string password)
     {
-        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email && u.Hash == password);
+        // Validate email's and password's formats (TODO)
+
+
+        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email.Trim() == email && u.Hash == password);
 
         if (user == null)
             return null;

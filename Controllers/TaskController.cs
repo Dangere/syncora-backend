@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TaskManagementWebAPI.Enums;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 using TaskManagementWebAPI.Services;
 
@@ -16,8 +17,9 @@ public class TasksController(TaskService taskServices) : ControllerBase
 
 
     //GET /tasks
+    [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<IActionResult> GetTasks()
+    public async Task<IActionResult> GetAllTasks()
     {
         return Ok(await _taskServices.GetTaskDTOs());
     }
