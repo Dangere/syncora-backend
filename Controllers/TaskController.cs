@@ -1,3 +1,4 @@
+using LibraryManagementSystem.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Enums;
@@ -6,7 +7,7 @@ using TaskManagementWebAPI.Services;
 
 namespace TaskManagementWebAPI.Controllers;
 
-[Authorize]
+[Authorize(Roles = nameof(UserRole.Admin))]
 [ApiController]
 [Route("api/[controller]")]
 public class TasksController(TaskService taskServices) : ControllerBase
@@ -17,63 +18,62 @@ public class TasksController(TaskService taskServices) : ControllerBase
 
 
     //GET /tasks
-    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<IActionResult> GetAllTasks()
     {
-        return Ok(await _taskServices.GetTaskDTOs());
-    }
+        Result<List<TaskDTO>> tasksFetchResult = await _taskServices.GetAllTaskDTOs();
 
+        if (!tasksFetchResult.IsSuccess)
+            return BadRequest(tasksFetchResult.ErrorMessage);
+
+        return Ok(tasksFetchResult.Data!);
+    }
 
     //GET /tasks/1
     [HttpGet("{id}", Name = _getTaskEndpointName)]
     public async Task<IActionResult> GetTask(int id)
     {
-        TaskDTO? task = await _taskServices.GetTaskDTO(id);
+        Result<TaskDTO> taskFetchResult = await _taskServices.GetTaskDTO(id);
 
-        if (task == null)
-            return NotFound();
-        else
-            return Ok(task);
+        if (!taskFetchResult.IsSuccess)
+            return BadRequest(taskFetchResult.ErrorMessage);
+
+        return Ok(taskFetchResult.Data);
     }
-
 
     //POST /tasks
     [HttpPost]
     public async Task<IActionResult> PostTask([FromBody] CreateTaskDTO newTask)
     {
-        TaskDTO createdTask = await _taskServices.CreateTask(newTask);
+        Result<TaskDTO> createdTaskResult = await _taskServices.CreateTask(newTask);
 
-        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTask.Id }, createdTask);
+        if (!createdTaskResult.IsSuccess)
+            return BadRequest(createdTaskResult.ErrorMessage);
+
+        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
     }
 
     //PUT /tasks/id
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
     {
+        Result<string> updatedResult = await _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
 
-        bool updatedTask = await _taskServices.UpdateTaskAsync(id, updatedTaskDTO);
+        if (!updatedResult.IsSuccess)
+            return BadRequest(updatedResult.ErrorMessage);
 
-        if (updatedTask)
-            return NoContent();
-        else
-            return NotFound();
-
+        return NoContent();
     }
-
-
 
     //DELETE /tasks/1
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        bool deleted = await _taskServices.RemoveTask(id);
+        Result<string> deletedResult = await _taskServices.RemoveTask(id);
 
-        if (deleted)
-            return NoContent();
-        else
-            return NotFound();
+        if (!deletedResult.IsSuccess)
+            return BadRequest(deletedResult.ErrorMessage);
 
-
+        return NoContent();
     }
 }
