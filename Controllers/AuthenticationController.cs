@@ -1,4 +1,5 @@
 
+using LibraryManagementSystem.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Models.DTOs.Auth;
 using TaskManagementWebAPI.Services;
@@ -16,24 +17,24 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> LoginWithEmailAndPassword([FromBody] LoginRequestDTO loginRequest)
     {
-        AuthenticationResponseDTO? loginResponseDTO = await _authService.LoginWithEmailAndPassword(loginRequest.Email, loginRequest.Password);
+        Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithEmailAndPassword(loginRequest.Email, loginRequest.Password);
 
-        if (loginResponseDTO == null)
-            return BadRequest("Invalid credentials.");
+        if (!loginResult.IsSuccess)
+            return BadRequest(loginResult.ErrorMessage);
 
-        return Ok(loginResponseDTO);
+        return Ok(loginResult.Data);
 
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> RegisterWithEmailAndPassword([FromBody] RegisterRequestDTO registerRequest)
     {
-        AuthenticationResponseDTO? registerResponseDTO = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.UserName);
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.UserName);
 
-        if (registerResponseDTO == null)
-            return BadRequest("Failed to register user.");
+        if (!registerResult.IsSuccess)
+            return BadRequest(registerResult.ErrorMessage);
 
-        return Ok(registerResponseDTO);
+        return Ok(registerResult.Data);
 
     }
 

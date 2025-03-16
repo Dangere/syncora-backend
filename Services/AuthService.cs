@@ -1,4 +1,5 @@
 using AutoMapper;
+using LibraryManagementSystem.Utilities;
 using Microsoft.EntityFrameworkCore;
 using TaskManagementWebAPI.Data;
 using TaskManagementWebAPI.Enums;
@@ -20,39 +21,59 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     // Deviating from these standards can result in an insecure app.
 
     // We are ignoring this for the sake of simplicity until we implement the OpenID Connect flow or OAuth standard flow.
-    public async Task<AuthenticationResponseDTO?> LoginWithEmailAndPassword(string email, string password)
+    public async Task<Result<AuthenticationResponseDTO>> LoginWithEmailAndPassword(string email, string password)
     {
-        // Validate email's and password's formats (TODO)
         UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
 
         if (user == null)
-            return null;
+            return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
 
         byte[] salt = Convert.FromBase64String(user.Salt);
         string hash = Hashing.HashPassword(password, salt);
 
         if (!string.Equals(hash, user.Hash))
-            return null;
+            return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
 
-        return new AuthenticationResponseDTO(_tokenService.GenerateAccessToken(user), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(_tokenService.GenerateAccessToken(user), _mapper.Map<UserDTO>(user));
+        return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    public async Task<AuthenticationResponseDTO?> RegisterWithEmailAndPassword(string email, string password, string userName)
+    public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(string email, string password, string userName)
     {
-        // Validate email's and password's formats (TODO)
-        // Check for used email (TODO)
-        // Check for used username (TODO)
+        // Validate email's and password's formats
+        if (!Validators.ValidateEmail(email))
+        {
+            return Result<AuthenticationResponseDTO>.Error("Email is not valid format.");
 
+        }
+        if (!Validators.ValidatePassword(password))
+        {
+            return Result<AuthenticationResponseDTO>.Error("Password is not valid format.");
+        }
+
+        // Validate availability of email and username
+        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email || u.UserName == userName);
+        if (userWithSameEmailOrUserName != null)
+        {
+            if (userWithSameEmailOrUserName.Email == email)
+                return Result<AuthenticationResponseDTO>.Error("Email is already in use.");
+
+            if (userWithSameEmailOrUserName.UserName == userName)
+                return Result<AuthenticationResponseDTO>.Error("Username is already in use.");
+        }
+
+        // Generate salt and hash
         byte[] salt = Hashing.GenerateSalt();
         string hash = Hashing.HashPassword(password, salt);
 
         UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, Role = UserRole.User, UserName = userName };
 
+        // Save user
         await _dbContext.Users.AddAsync(user);
         await _dbContext.SaveChangesAsync();
 
-        return new AuthenticationResponseDTO(_tokenService.GenerateAccessToken(user), _mapper.Map<UserDTO>(user));
-
+        AuthenticationResponseDTO authenticationResponse = new(_tokenService.GenerateAccessToken(user), _mapper.Map<UserDTO>(user));
+        return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
 }
