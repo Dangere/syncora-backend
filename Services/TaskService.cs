@@ -3,6 +3,7 @@ using TaskManagementWebAPI.Models.Entities;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 using TaskManagementWebAPI.Data;
 using Microsoft.EntityFrameworkCore;
+using LibraryManagementSystem.Utilities;
 
 namespace TaskManagementWebAPI.Services;
 public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
@@ -11,48 +12,48 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly SyncoraDbContext _dbContext = dbContext;
 
 
-    public async Task<List<TaskDTO>> GetTaskDTOs()
+    public async Task<Result<List<TaskDTO>>> GetAllTaskDTOs()
     {
         //this will load all entities into memory just to filter through them (bad approach)
         // await _dbContext.Tasks.ForEachAsync(t => taskDTOs.Add(_mapper.Map<TaskDTO>(t)));
 
 
         //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
-        return await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.Id).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+
+        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.Id).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+
+        return Result<List<TaskDTO>>.Success(tasks);
     }
 
-    public async Task<TaskDTO?> GetTaskDTO(int id)
+    public async Task<Result<TaskDTO>> GetTaskDTO(int id)
     {
-        TaskEntity? taskEntity = await GetTaskEntity(id);
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
         if (taskEntity == null)
-            return null;
+            return Result<TaskDTO>.Error("Task does not exist.");
 
-        return _mapper.Map<TaskDTO>(taskEntity);
+        return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
-    public async Task<TaskEntity?> GetTaskEntity(int id)
+    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO)
     {
+        // Make sure the user exists
+        if (await _dbContext.Users.FindAsync(newTaskDTO.OwnerId) == null)
+            return Result<TaskDTO>.Error("User does not exist.");
 
-        return await _dbContext.Tasks.FindAsync(id);
-    }
-
-    public async Task<TaskDTO> CreateTask(CreateTaskDTO newTaskDTO)
-    {
-        //change from UTC time to region specific time
         TaskEntity createdTask = new() { Title = newTaskDTO.Title, CreationDate = DateTime.UtcNow, OwnerUserId = newTaskDTO.OwnerId };
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
 
-        return _mapper.Map<TaskDTO>(createdTask);
+        return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
     }
-    public async Task<bool> UpdateTaskAsync(int id, UpdateTaskDTO updatedTaskDTO)
+    public async Task<Result<string>> UpdateTaskAsync(int id, UpdateTaskDTO updatedTaskDTO)
     {
 
-        TaskEntity? task = await GetTaskEntity(id);
+        TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
 
         if (task == null)
-            return false;
+            return Result<string>.Error("Task does not exist.");
 
         task.Title = updatedTaskDTO.NewTitle ?? task.Title;
         task.Description = updatedTaskDTO.NewDescription ?? task.Description;
@@ -63,21 +64,21 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
         await _dbContext.SaveChangesAsync();
 
-        return true;
+        return Result<string>.Success("Task updated.");
     }
 
-    public async Task<bool> RemoveTask(int id)
+    public async Task<Result<string>> RemoveTask(int id)
     {
-        TaskEntity? task = await GetTaskEntity(id);
+        TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
 
         if (task == null)
-            return false;
+            return Result<string>.Error("Task does not exist.");
+
 
 
         _dbContext.Tasks.Remove(task);
         await _dbContext.SaveChangesAsync();
 
-        return true;
-
+        return Result<string>.Success("Task deleted.");
     }
 }
