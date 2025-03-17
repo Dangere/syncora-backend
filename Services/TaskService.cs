@@ -34,13 +34,13 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
-    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO)
+    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int userId)
     {
         // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(newTaskDTO.OwnerId) == null)
+        if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<TaskDTO>.Error("User does not exist.");
 
-        TaskEntity createdTask = new() { Title = newTaskDTO.Title, CreationDate = DateTime.UtcNow, OwnerUserId = newTaskDTO.OwnerId };
+        TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, OwnerUserId = userId };
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
