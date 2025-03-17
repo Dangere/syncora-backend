@@ -23,7 +23,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     // We are ignoring this for the sake of simplicity until we implement the OpenID Connect flow or OAuth standard flow.
     public async Task<Result<AuthenticationResponseDTO>> LoginWithEmailAndPassword(string email, string password)
     {
-        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
 
         if (user == null)
             return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
@@ -52,7 +52,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
 
         // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email || u.UserName == userName);
+        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower() || u.UserName.ToLower() == userName.ToLower());
         if (userWithSameEmailOrUserName != null)
         {
             if (userWithSameEmailOrUserName.Email == email)
