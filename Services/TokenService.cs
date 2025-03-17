@@ -20,11 +20,13 @@ public class TokenService(IConfiguration configuration)
     public string GenerateAccessToken(UserEntity user)
     {
         // Create claims. Notice how we include a role claim based on the user's properties.
+        // We use JwtRegisteredClaimNames.Sub when creating tokens, because it's a standard JWT claim name.
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(ClaimTypes.Role, user.Role.ToString()),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.UserName)
         };
 
         var jwtConfig = _config.GetSection("Jwt");
