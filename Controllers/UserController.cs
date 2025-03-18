@@ -1,6 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using AutoMapper;
 using LibraryManagementSystem.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Attributes;
@@ -17,7 +15,7 @@ namespace TaskManagementWebAPI.Controllers;
 public class UserController(TaskService taskService) : ControllerBase
 {
     private readonly TaskService _taskService = taskService;
-    private const string _getTaskEndpointName = "GetTask";
+    private const string _getTaskEndpointName = "GetTaskForUser";
 
 
     [HttpGet("tasks")]
