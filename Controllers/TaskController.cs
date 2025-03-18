@@ -57,7 +57,7 @@ public class TasksController(TaskService taskService) : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
     {
-        Result<string> updatedResult = await _taskService.UpdateTaskAsync(id, updatedTaskDTO);
+        Result<string> updatedResult = await _taskService.UpdateTask(id, updatedTaskDTO);
 
         if (!updatedResult.IsSuccess)
             return BadRequest(updatedResult.ErrorMessage);

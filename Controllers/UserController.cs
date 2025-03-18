@@ -17,10 +17,11 @@ namespace TaskManagementWebAPI.Controllers;
 public class UserController(TaskService taskService) : ControllerBase
 {
     private readonly TaskService _taskService = taskService;
+    private const string _getTaskEndpointName = "GetTask";
 
 
     [HttpGet("tasks")]
-    public async Task<IActionResult> GetAllTasks()
+    public async Task<IActionResult> GetAllOwnedTasks()
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -33,6 +34,18 @@ public class UserController(TaskService taskService) : ControllerBase
         return Ok(fetchingTasksResult.Data);
     }
 
+    [HttpGet("tasks/{taskId}", Name = _getTaskEndpointName)]
+    public async Task<IActionResult> GetTask(int taskId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<TaskDTO> fetchingTaskResult = await _taskService.GetTaskForUser(taskId, userId);
+
+        if (!fetchingTaskResult.IsSuccess)
+            return Unauthorized(fetchingTaskResult.ErrorMessage);
+
+        return Ok(fetchingTaskResult.Data);
+    }
 
 
     [HttpPost("tasks")]
@@ -46,6 +59,21 @@ public class UserController(TaskService taskService) : ControllerBase
         if (!createdTaskResult.IsSuccess)
             return BadRequest(createdTaskResult.ErrorMessage);
 
-        return Ok(createdTaskResult.Data);
+        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
     }
+
+    [HttpPut("tasks/{taskId}")]
+    public async Task<IActionResult> UpdateTask(int taskId, [FromBody] UpdateTaskDTO updateTask)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> updatedTaskResult = await _taskService.UpdateTaskForUser(taskId, userId, updateTask);
+
+
+        if (!updatedTaskResult.IsSuccess)
+            return BadRequest(updatedTaskResult.ErrorMessage);
+
+        return Ok(updatedTaskResult.Data);
+    }
+
 }

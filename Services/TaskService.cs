@@ -18,6 +18,43 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         return Result<List<TaskDTO>>.Success(tasks);
     }
 
+    public async Task<Result<TaskDTO>> GetTaskForUser(int taskId, int userId)
+    {
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        if (taskEntity == null)
+            return Result<TaskDTO>.Error("Task does not exist.");
+
+        bool hasAccess = taskEntity.OwnerUserId == userId || taskEntity.SharedUsers.Any(u => u.Id == userId);
+
+        if (!hasAccess)
+            return Result<TaskDTO>.Error("User has no access to this task.");
+        return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
+    }
+
+    public async Task<Result<string>> UpdateTaskForUser(int taskId, int userId, UpdateTaskDTO updatedTaskDTO)
+    {
+
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+
+        if (taskEntity == null)
+            return Result<string>.Error("Task does not exist.");
+
+        bool hasAccess = taskEntity.OwnerUserId == userId || taskEntity.SharedUsers.Any(u => u.Id == userId);
+
+        if (!hasAccess)
+            return Result<string>.Error("User has no access to this task.");
+
+        taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
+        taskEntity.Description = updatedTaskDTO.NewDescription ?? taskEntity.Description;
+
+        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+            taskEntity.LastUpdateDate = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Result<string>.Success("Task updated.");
+    }
+
     public async Task<Result<List<TaskDTO>>> GetAllTaskDTOs()
     {
         //this will load all entities into memory just to filter through them (bad approach)
@@ -53,7 +90,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
     }
-    public async Task<Result<string>> UpdateTaskAsync(int id, UpdateTaskDTO updatedTaskDTO)
+    public async Task<Result<string>> UpdateTask(int id, UpdateTaskDTO updatedTaskDTO)
     {
 
         TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
