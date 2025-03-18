@@ -11,6 +11,12 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
+    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId)
+    {
+        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().Where(t => t.OwnerUserId == userId).OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+
+        return Result<List<TaskDTO>>.Success(tasks);
+    }
 
     public async Task<Result<List<TaskDTO>>> GetAllTaskDTOs()
     {
@@ -20,7 +26,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
         //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
 
-        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.Id).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
 
         return Result<List<TaskDTO>>.Success(tasks);
     }

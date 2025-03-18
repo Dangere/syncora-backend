@@ -19,6 +19,22 @@ public class UserController(TaskService taskService) : ControllerBase
     private readonly TaskService _taskService = taskService;
 
 
+    [HttpGet("tasks")]
+    public async Task<IActionResult> GetAllTasks()
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<List<TaskDTO>> fetchingTasksResult = await _taskService.GetTasksForUser(userId);
+
+
+        if (!fetchingTasksResult.IsSuccess)
+            return BadRequest(fetchingTasksResult.ErrorMessage);
+
+        return Ok(fetchingTasksResult.Data);
+    }
+
+
+
     [HttpPost("tasks")]
     public async Task<IActionResult> CreateTask([FromBody] CreateTaskDTO newTask)
     {
