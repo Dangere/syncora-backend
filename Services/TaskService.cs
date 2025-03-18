@@ -39,9 +39,13 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.");
 
-        bool hasAccess = taskEntity.OwnerUserId == userId || taskEntity.SharedUsers.Any(u => u.Id == userId);
-
-        if (!hasAccess)
+        bool isOwner = taskEntity.OwnerUserId == userId;
+        bool isShared = taskEntity.SharedUsers.Any(u => u.Id == userId);
+        if (!isOwner && isShared)
+        {
+            return Result<string>.Error("A shared user can't update the details of a task they don't own");
+        }
+        else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this task.");
 
         taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
