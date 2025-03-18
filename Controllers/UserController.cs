@@ -57,7 +57,7 @@ public class UserController(TaskService taskService) : ControllerBase
         if (!createdTaskResult.IsSuccess)
             return BadRequest(createdTaskResult.ErrorMessage);
 
-        return CreatedAtRoute(_getTaskEndpointName, new { id = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
+        return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
     }
 
     [HttpPut("tasks/{taskId}")]
