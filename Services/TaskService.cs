@@ -57,9 +57,8 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
         task.Title = updatedTaskDTO.NewTitle ?? task.Title;
         task.Description = updatedTaskDTO.NewDescription ?? task.Description;
-        task.Completed = updatedTaskDTO.Completed ?? task.Completed;
 
-        if (updatedTaskDTO.Completed != null || updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
             task.LastUpdateDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
