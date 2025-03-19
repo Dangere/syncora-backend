@@ -1,5 +1,5 @@
 using AutoMapper;
-using LibraryManagementSystem.Utilities;
+using TaskManagementWebAPI.Utilities;
 using Microsoft.EntityFrameworkCore;
 using TaskManagementWebAPI.Data;
 using TaskManagementWebAPI.Enums;
