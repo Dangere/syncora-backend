@@ -27,7 +27,7 @@ public class UserController(TaskService taskService) : ControllerBase
 
 
         if (!fetchingTasksResult.IsSuccess)
-            return BadRequest(fetchingTasksResult.ErrorMessage);
+            return StatusCode(fetchingTasksResult.ErrorStatusCode, fetchingTasksResult.ErrorMessage);
 
         return Ok(fetchingTasksResult.Data);
     }
@@ -40,7 +40,7 @@ public class UserController(TaskService taskService) : ControllerBase
         Result<TaskDTO> fetchingTaskResult = await _taskService.GetTaskForUser(taskId, userId);
 
         if (!fetchingTaskResult.IsSuccess)
-            return Unauthorized(fetchingTaskResult.ErrorMessage);
+            return StatusCode(fetchingTaskResult.ErrorStatusCode, fetchingTaskResult.ErrorMessage);
 
         return Ok(fetchingTaskResult.Data);
     }
@@ -55,7 +55,7 @@ public class UserController(TaskService taskService) : ControllerBase
 
 
         if (!createdTaskResult.IsSuccess)
-            return BadRequest(createdTaskResult.ErrorMessage);
+            return StatusCode(createdTaskResult.ErrorStatusCode, createdTaskResult.ErrorMessage);
 
         return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
     }
@@ -69,7 +69,7 @@ public class UserController(TaskService taskService) : ControllerBase
 
 
         if (!updatedTaskResult.IsSuccess)
-            return BadRequest(updatedTaskResult.ErrorMessage);
+            return StatusCode(updatedTaskResult.ErrorStatusCode, updatedTaskResult.ErrorMessage);
 
         return Ok(updatedTaskResult.Data);
     }

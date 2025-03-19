@@ -24,7 +24,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetAllTaskDTOs();
 
         if (!tasksFetchResult.IsSuccess)
-            return BadRequest(tasksFetchResult.ErrorMessage);
+            return StatusCode(tasksFetchResult.ErrorStatusCode, tasksFetchResult.ErrorMessage);
 
         return Ok(tasksFetchResult.Data!);
     }
@@ -36,7 +36,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         Result<TaskDTO> taskFetchResult = await _taskService.GetTaskDTO(id);
 
         if (!taskFetchResult.IsSuccess)
-            return BadRequest(taskFetchResult.ErrorMessage);
+            return StatusCode(taskFetchResult.ErrorStatusCode, taskFetchResult.ErrorMessage);
 
         return Ok(taskFetchResult.Data);
     }
@@ -48,7 +48,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         Result<TaskDTO> createdTaskResult = await _taskService.CreateTask(newTask, userId);
 
         if (!createdTaskResult.IsSuccess)
-            return BadRequest(createdTaskResult.ErrorMessage);
+            return StatusCode(createdTaskResult.ErrorStatusCode, createdTaskResult.ErrorMessage);
 
         return CreatedAtRoute(_getTaskEndpointName, new { id = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
     }
@@ -60,7 +60,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         Result<string> updatedResult = await _taskService.UpdateTask(id, updatedTaskDTO);
 
         if (!updatedResult.IsSuccess)
-            return BadRequest(updatedResult.ErrorMessage);
+            return StatusCode(updatedResult.ErrorStatusCode, updatedResult.ErrorMessage);
 
         return NoContent();
     }
@@ -72,7 +72,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         Result<string> deletedResult = await _taskService.RemoveTask(id);
 
         if (!deletedResult.IsSuccess)
-            return BadRequest(deletedResult.ErrorMessage);
+            return StatusCode(deletedResult.ErrorStatusCode, deletedResult.ErrorMessage);
 
         return NoContent();
     }

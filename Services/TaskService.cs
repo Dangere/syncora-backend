@@ -22,12 +22,12 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     {
         TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
         if (taskEntity == null)
-            return Result<TaskDTO>.Error("Task does not exist.");
+            return Result<TaskDTO>.Error("Task does not exist.", 404);
 
         bool hasAccess = taskEntity.OwnerUserId == userId || taskEntity.SharedUsers.Any(u => u.Id == userId);
 
         if (!hasAccess)
-            return Result<TaskDTO>.Error("User has no access to this task.");
+            return Result<TaskDTO>.Error("User has no access to this task.", 403);
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
@@ -37,16 +37,16 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
 
         if (taskEntity == null)
-            return Result<string>.Error("Task does not exist.");
+            return Result<string>.Error("Task does not exist.", 404);
 
         bool isOwner = taskEntity.OwnerUserId == userId;
         bool isShared = taskEntity.SharedUsers.Any(u => u.Id == userId);
         if (!isOwner && isShared)
         {
-            return Result<string>.Error("A shared user can't update the details of a task they don't own");
+            return Result<string>.Error("A shared user can't update the details of a task they don't own", 403);
         }
         else if (!isOwner && !isShared)
-            return Result<string>.Error("User has no access to this task.");
+            return Result<string>.Error("User has no access to this task.", 403);
 
         taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
         taskEntity.Description = updatedTaskDTO.NewDescription ?? taskEntity.Description;
@@ -76,7 +76,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     {
         TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
         if (taskEntity == null)
-            return Result<TaskDTO>.Error("Task does not exist.");
+            return Result<TaskDTO>.Error("Task does not exist.", 404);
 
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
@@ -85,7 +85,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     {
         // Make sure the user exists
         if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<TaskDTO>.Error("User does not exist.");
+            return Result<TaskDTO>.Error("User does not exist.", 404);
 
         TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, OwnerUserId = userId };
 
@@ -100,7 +100,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
 
         if (task == null)
-            return Result<string>.Error("Task does not exist.");
+            return Result<string>.Error("Task does not exist.", 404);
 
         task.Title = updatedTaskDTO.NewTitle ?? task.Title;
         task.Description = updatedTaskDTO.NewDescription ?? task.Description;
@@ -118,7 +118,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
 
         if (task == null)
-            return Result<string>.Error("Task does not exist.");
+            return Result<string>.Error("Task does not exist.", 404);
 
 
 
