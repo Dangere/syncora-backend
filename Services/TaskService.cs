@@ -48,15 +48,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this task.", 403);
 
-        taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
-        taskEntity.Description = updatedTaskDTO.NewDescription ?? taskEntity.Description;
-
-        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-            taskEntity.LastUpdateDate = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return Result<string>.Success("Task updated.");
+        return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
     }
 
     public async Task<Result<List<TaskDTO>>> GetAllTaskDTOs()
@@ -97,34 +89,39 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     public async Task<Result<string>> UpdateTask(int id, UpdateTaskDTO updatedTaskDTO)
     {
 
-        TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
 
-        if (task == null)
+        if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", 404);
 
-        task.Title = updatedTaskDTO.NewTitle ?? task.Title;
-        task.Description = updatedTaskDTO.NewDescription ?? task.Description;
-
-        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
-            task.LastUpdateDate = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return Result<string>.Success("Task updated.");
+        return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
     }
 
     public async Task<Result<string>> RemoveTask(int id)
     {
-        TaskEntity? task = await _dbContext.Tasks.FindAsync(id);
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
 
-        if (task == null)
+        if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", 404);
 
 
 
-        _dbContext.Tasks.Remove(task);
+        _dbContext.Tasks.Remove(taskEntity);
         await _dbContext.SaveChangesAsync();
 
         return Result<string>.Success("Task deleted.");
+    }
+
+    private async Task<Result<string>> UpdateTaskEntity(TaskEntity taskEntity, UpdateTaskDTO updatedTaskDTO)
+    {
+        taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
+        taskEntity.Description = updatedTaskDTO.NewDescription ?? taskEntity.Description;
+
+        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+            taskEntity.LastUpdateDate = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Result<string>.Success("Task updated.");
     }
 }
