@@ -47,6 +47,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+
 app.UseRouting();
 app.MapControllers();
 
