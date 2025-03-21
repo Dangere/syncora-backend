@@ -74,4 +74,31 @@ public class UserController(TaskService taskService) : ControllerBase
         return Ok(updatedTaskResult.Data);
     }
 
+    [HttpPost("tasks/{taskId}/grant-access/{userName}")]
+    public async Task<IActionResult> GrantAccessToTask(int taskId, string userName)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> grantResult = await _taskService.AllowAccessToTask(taskId, userId, userName, true);
+
+        if (!grantResult.IsSuccess)
+            return StatusCode(grantResult.ErrorStatusCode, grantResult.ErrorMessage);
+
+        return Ok(grantResult.Data);
+
+    }
+
+    [HttpPost("tasks/{taskId}/revoke-access/{userName}")]
+    public async Task<IActionResult> RevokeAccessToTask(int taskId, string userName)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> revokeResult = await _taskService.AllowAccessToTask(taskId, userId, userName, false);
+
+        if (!revokeResult.IsSuccess)
+            return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
+
+        return Ok(revokeResult.Data);
+
+    }
 }

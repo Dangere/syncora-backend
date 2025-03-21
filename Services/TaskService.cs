@@ -13,7 +13,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
     public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId)
     {
-        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().Where(t => t.OwnerUserId == userId).OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+        List<TaskDTO> tasks = await _dbContext.Tasks.Include(t => t.SharedUsers).AsNoTracking().Where(t => t.OwnerUserId == userId).OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
 
         return Result<List<TaskDTO>>.Success(tasks);
     }
@@ -51,6 +51,42 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
     }
 
+    public async Task<Result<string>> AllowAccessToTask(int taskId, int userId, string userNameToGrant, bool allowAccess)
+    {
+        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.SharedUsers).FirstOrDefaultAsync(t => t.Id == taskId);
+
+        if (taskEntity == null)
+            return Result<string>.Error("Task does not exist.", 404);
+
+        UserEntity? userToGrant = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
+
+        if (userToGrant == null)
+            return Result<string>.Error("User does not exist.", 404);
+
+
+        if (allowAccess == taskEntity.SharedUsers.Any(u => u.Id == userToGrant.Id))
+            return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 403);
+
+
+        bool isOwner = taskEntity.OwnerUserId == userId;
+        bool isShared = taskEntity.SharedUsers.Any(u => u.Id == userId);
+        if (!isOwner && isShared)
+        {
+            return Result<string>.Error("A shared user can't " + (allowAccess ? "grant" : "revoke") + " access to a task they don't own", 403);
+        }
+        else if (!isOwner && !isShared)
+            return Result<string>.Error("User has no access to this task.", 403);
+
+        if (allowAccess)
+            taskEntity.SharedUsers.Add(userToGrant);
+        else
+            taskEntity.SharedUsers.Remove(userToGrant);
+
+        await _dbContext.SaveChangesAsync();
+
+        return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
+
+    }
     public async Task<Result<List<TaskDTO>>> GetAllTaskDTOs()
     {
         //this will load all entities into memory just to filter through them (bad approach)
@@ -59,7 +95,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
         //this will run a `SELECT` sql query where it uses the TaskDTO properties as the selected columns
 
-        List<TaskDTO> tasks = await _dbContext.Tasks.AsNoTracking().OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+        List<TaskDTO> tasks = await _dbContext.Tasks.Include(t => t.SharedUsers).AsNoTracking().OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
 
         return Result<List<TaskDTO>>.Success(tasks);
     }
