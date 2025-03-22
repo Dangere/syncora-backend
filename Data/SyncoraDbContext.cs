@@ -13,11 +13,14 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
 
-        // One-to-Many: A Task has one Owner, while owner can own multiple tasks, temporary using DeleteBehavior.NoAction for testing
-        modelBuilder.Entity<TaskEntity>().HasOne(t => t.OwnerUser).WithMany(u => u.OwnedTasks).HasForeignKey(t => t.OwnerUserId).OnDelete(DeleteBehavior.SetNull);
+        // One-to-Many: A Task has one group, while the group can own multiple tasks
+        modelBuilder.Entity<TaskEntity>().HasOne(t => t.Group).WithMany(tg => tg.Tasks).HasForeignKey(t => t.GroupId).OnDelete(DeleteBehavior.Cascade);
 
-        // Many-to-Many: A Task can be accessed by multiple users, while users can have access to multiple tasks
-        modelBuilder.Entity<TaskEntity>().HasMany(t => t.SharedUsers).WithMany(u => u.AccessibleTasks);
+        // One-to-Many: A User has many groups, while groups can be owned by only one user
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.OwnedGroups).WithOne(tg => tg.OwnerUser).HasForeignKey(tg => tg.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+
+        // Many-to-Many: A group can be accessed by multiple users, while users can have access to multiple group
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.AccessibleGroups).WithMany(tg => tg.SharedUsers);
 
         base.OnModelCreating(modelBuilder);
     }

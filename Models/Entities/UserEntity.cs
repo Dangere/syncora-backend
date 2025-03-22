@@ -19,9 +19,9 @@ public class UserEntity
     public string? ProfilePictureURL { get; set; } = null;
 
     // Using HashSet to avoid duplicate TaskEntity instances in memory.
-    // One-to-Many: A user can own multiple tasks
-    public HashSet<TaskEntity> OwnedTasks { get; set; } = [];
+    // One-to-Many: A user can own multiple groups, while groups can be owned by only one user
+    public HashSet<TaskGroupEntity> OwnedGroups { get; set; } = [];
 
-    // Many-to-Many: A user can access multiple tasks
-    public HashSet<TaskEntity> AccessibleTasks { get; set; } = [];
+    // Many-to-Many: A user can access multiple groups, while groups can be accessed by multiple users
+    public HashSet<TaskGroupEntity> AccessibleGroups { get; set; } = [];
 }

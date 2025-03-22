@@ -9,16 +9,7 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<TaskEntity, TaskDTO>().ConstructUsing(src => new TaskDTO(
-        src.Id,
-        src.Title,
-        src.Description,
-        src.Completed,
-        src.CreationDate,
-        src.LastUpdateDate,
-        src.OwnerUserId,
-        src.SharedUsers.Select(x => x.Id).ToArray()
-        ));
+        CreateMap<TaskEntity, TaskDTO>();
         // CreateMap<TaskEntity, TaskDTO>();
 
 

@@ -23,11 +23,9 @@ public class TaskEntity
 
     public DateTime? LastUpdateDate { get; set; }
 
-    // Using HashSet to avoid duplicate TaskEntity instances in memory.
-    // Foreign key pointing to User
     [Required]
-    public required int OwnerUserId { get; set; }
-    public UserEntity OwnerUser { get; set; } = null!;
+    public required int GroupId { get; set; }
+    // Navigation Properties
+    public TaskGroupEntity Group { get; set; } = null!;
 
-    public HashSet<UserEntity> SharedUsers { get; } = [];
 }

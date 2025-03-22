@@ -8,6 +8,5 @@ public record class TaskDTO(
     bool Completed,
     DateTime CreationDate,
     DateTime? LastUpdateDate,
-    int OwnerUserId,
-    int[] SharedUsersIds
+    int GroupId
 );
