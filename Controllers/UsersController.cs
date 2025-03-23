@@ -12,7 +12,7 @@ namespace TaskManagementWebAPI.Controllers;
 [AuthorizeRoles(UserRole.Admin, UserRole.User)]
 [ApiController]
 [Route("api/[controller]")]
-public class UserController(TaskService taskService) : ControllerBase
+public class UsersController(TaskService taskService) : ControllerBase
 {
     private readonly TaskService _taskService = taskService;
     private const string _getTaskEndpointName = "GetTaskForUser";
