@@ -150,10 +150,10 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 
     private async Task<Result<string>> UpdateTaskEntity(TaskEntity taskEntity, UpdateTaskDTO updatedTaskDTO)
     {
-        taskEntity.Title = updatedTaskDTO.NewTitle ?? taskEntity.Title;
-        taskEntity.Description = updatedTaskDTO.NewDescription ?? taskEntity.Description;
+        taskEntity.Title = updatedTaskDTO.Title ?? taskEntity.Title;
+        taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
 
-        if (updatedTaskDTO.NewTitle != null || updatedTaskDTO.NewDescription != null)
+        if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
             taskEntity.LastUpdateDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
