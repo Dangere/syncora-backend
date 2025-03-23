@@ -15,6 +15,7 @@ builder.Services.AddControllers();
 
 // Add services, Lifecycle: Scoped
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<GroupService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();

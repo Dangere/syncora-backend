@@ -1,0 +1,83 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using TaskManagementWebAPI.Attributes;
+using TaskManagementWebAPI.Enums;
+using TaskManagementWebAPI.Models.DTOs.Groups;
+using TaskManagementWebAPI.Services;
+using TaskManagementWebAPI.Utilities;
+
+namespace TaskManagementWebAPI.Controllers;
+
+[AuthorizeRoles(UserRole.Admin, UserRole.User)]
+[ApiController]
+[Route("api/[controller]")]
+public class GroupsController(GroupService groupService) : ControllerBase
+{
+    private readonly GroupService _groupService = groupService;
+    private const string _getGroupEndpointName = "GetGroup";
+
+    [HttpGet()]
+    public async Task<IActionResult> GetGroups()
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<GroupDTO[]> fetchResult = await _groupService.GetGroups(userId);
+
+        if (!fetchResult.IsSuccess)
+            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
+
+        return Ok(fetchResult.Data);
+    }
+
+    [HttpGet("{groupId}", Name = _getGroupEndpointName)]
+    public async Task<IActionResult> GetGroup(int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<GroupDTO> fetchResult = await _groupService.GetGroup(userId, groupId);
+
+        if (!fetchResult.IsSuccess)
+            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
+
+        return Ok(fetchResult.Data);
+    }
+
+    [HttpPost()]
+    public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDTO createGroupDTO)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<GroupDTO> createResult = await _groupService.CreateGroup(createGroupDTO, userId);
+
+        if (!createResult.IsSuccess)
+            return StatusCode(createResult.ErrorStatusCode, createResult.ErrorMessage);
+
+        return CreatedAtRoute(_getGroupEndpointName, new { groupId = createResult.Data!.Id }, createResult.Data);
+    }
+
+    [HttpPut("{groupId}")]
+    public async Task<IActionResult> UpdateGroup([FromBody] UpdateGroupDTO updateGroupDTO, int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> updateResult = await _groupService.UpdateGroup(updateGroupDTO, userId, groupId);
+
+        if (!updateResult.IsSuccess)
+            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+
+        return NoContent();
+    }
+
+    [HttpDelete("{groupId}")]
+    public async Task<IActionResult> DeleteGroup(int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> deleteResult = await _groupService.DeleteGroup(userId, groupId);
+
+        if (!deleteResult.IsSuccess)
+            return StatusCode(deleteResult.ErrorStatusCode, deleteResult.ErrorMessage);
+
+        return NoContent();
+    }
+}

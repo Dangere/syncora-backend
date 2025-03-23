@@ -12,9 +12,23 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
+    public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+
+        if (groupEntity == null)
+            return Result<GroupDTO>.Error("Group does not exist.", 404);
+
+        if (groupEntity.OwnerUserId == userId || groupEntity.SharedUsers.Any(u => u.Id == userId))
+            return new Result<GroupDTO>(_mapper.Map<GroupDTO>(groupEntity));
+
+        return Result<GroupDTO>.Error("User has no access to this group.", 403);
+
+    }
+
     public async Task<Result<GroupDTO[]>> GetGroups(int userId)
     {
-        GroupDTO[] groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToArrayAsync();
+        GroupDTO[] groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToArrayAsync();
 
         return new Result<GroupDTO[]>(groups);
     }
@@ -40,8 +54,9 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<string>.Error("User does not exist.", 404);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.FindAsync(groupId);
-        // Make sure the user exists
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+
+        // Make sure the group exists
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", 404);
 
@@ -63,8 +78,8 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<string>.Error("User does not exist.", 404);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.FindAsync(groupId);
-        // Make sure the user exists
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+        // Make sure the group exists
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", 404);
 
@@ -90,6 +105,9 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     private async Task<Result<string>> UpdateGroupEntity(GroupEntity groupEntity, UpdateGroupDTO updateGroupDTO)
     {
+        if (updateGroupDTO.Title == groupEntity.Title && updateGroupDTO.Description == groupEntity.Description)
+            return Result<string>.Error("Group details are the same.", 400);
+
         groupEntity.Title = updateGroupDTO.Title ?? groupEntity.Title;
         groupEntity.Description = updateGroupDTO.Description ?? groupEntity.Description;
 

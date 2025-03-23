@@ -12,7 +12,7 @@ public class MappingProfile : Profile
     {
         CreateMap<TaskEntity, TaskDTO>();
         CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.SharedUsers, opt => opt.MapFrom(src => src.SharedUsers.Select(u => u.UserName)));
-
+        CreateMap<UserEntity, string>().ConvertUsing(u => u.UserName);
 
         // Configure the mapping from UserEntity to UserDTO and vice versa
         // While converting the role enum to string and vice versa
