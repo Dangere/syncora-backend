@@ -8,6 +8,8 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
 
     public DbSet<UserEntity> Users { get; set; }
     public DbSet<TaskEntity> Tasks { get; set; }
+    public DbSet<GroupEntity> Groups { get; set; }
+
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

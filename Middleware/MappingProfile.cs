@@ -2,6 +2,7 @@ using AutoMapper;
 using TaskManagementWebAPI.Models.Entities;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 using TaskManagementWebAPI.Models.DTOs.Users;
+using TaskManagementWebAPI.Models.DTOs.Groups;
 using TaskManagementWebAPI.Enums;
 
 namespace TaskManagementWebAPI.Middleware;
@@ -10,7 +11,7 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<TaskEntity, TaskDTO>();
-        // CreateMap<TaskEntity, TaskDTO>();
+        CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.SharedUsers, opt => opt.MapFrom(src => src.SharedUsers.Select(u => u.UserName)));
 
 
         // Configure the mapping from UserEntity to UserDTO and vice versa

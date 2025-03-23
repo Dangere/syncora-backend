@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TaskManagementWebAPI.Models.Entities;
 
-[Table("task_groups", Schema = "public")]
-public class TaskGroupEntity
+[Table("groups", Schema = "public")]
+public class GroupEntity
 {
     public int Id { get; set; }
     [Required]

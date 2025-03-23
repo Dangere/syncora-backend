@@ -26,6 +26,6 @@ public class TaskEntity
     [Required]
     public required int GroupId { get; set; }
     // Navigation Properties
-    public TaskGroupEntity Group { get; set; } = null!;
+    public GroupEntity Group { get; set; } = null!;
 
 }
