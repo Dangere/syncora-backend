@@ -3,11 +3,13 @@ using TaskManagementWebAPI.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Models.DTOs.Auth;
 using TaskManagementWebAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TaskManagementWebAPI.Controllers;
 
 
-// This controller doesn't have authorization 
+// This controller doesn't have authorization, can be accessed by anyone
+[AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthenticationController(AuthService authService) : ControllerBase

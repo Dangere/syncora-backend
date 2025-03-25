@@ -4,6 +4,7 @@
 /.vscode/
 appsettings.json
 appsettings.Development.json
+*.sql
 
 Migrations/
 ## Ignore Visual Studio temporary files, build results, and
