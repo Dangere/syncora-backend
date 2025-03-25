@@ -80,4 +80,30 @@ public class GroupsController(GroupService groupService) : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("{groupId}/grant-access/{userName}")]
+    public async Task<IActionResult> GrantAccessToGroup(int groupId, string userName)
+    {
+        int currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> grantResult = await _groupService.AllowAccessToGroup(groupId, currentUserId, userName, true);
+
+        if (!grantResult.IsSuccess)
+            return StatusCode(grantResult.ErrorStatusCode, grantResult.ErrorMessage);
+
+        return NoContent();
+    }
+
+    [HttpPost("{groupId}/revoke-access/{userName}")]
+    public async Task<IActionResult> RevokeAccessToGroup(int groupId, string userName)
+    {
+        int currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> revokeResult = await _groupService.AllowAccessToGroup(groupId, currentUserId, userName, false);
+
+        if (!revokeResult.IsSuccess)
+            return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
+
+        return NoContent();
+    }
 }

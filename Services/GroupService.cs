@@ -102,6 +102,41 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
             return Result<string>.Success("Group deleted along with all of its tasks.");
     }
 
+    public async Task<Result<string>> AllowAccessToGroup(int groupId, int userId, string userNameToGrant, bool allowAccess)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", 404);
+
+        UserEntity? userToGrant = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
+
+        if (userToGrant == null)
+            return Result<string>.Error("User does not exist.", 404);
+
+
+        if (allowAccess == groupEntity.SharedUsers.Any(u => u.Id == userToGrant.Id))
+            return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
+
+
+        bool isOwner = groupEntity.OwnerUserId == userId;
+        bool isShared = groupEntity.SharedUsers.Any(u => u.Id == userId);
+        if (!isOwner && isShared)
+        {
+            return Result<string>.Error("A shared user can't " + (allowAccess ? "grant" : "revoke") + " access to a group they don't own", 403);
+        }
+        else if (!isOwner && !isShared)
+            return Result<string>.Error("User has no access to this group.", 403);
+
+        if (allowAccess)
+            groupEntity.SharedUsers.Add(userToGrant);
+        else
+            groupEntity.SharedUsers.Remove(userToGrant);
+
+        await _dbContext.SaveChangesAsync();
+
+        return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
+    }
 
     private async Task<Result<string>> UpdateGroupEntity(GroupEntity groupEntity, UpdateGroupDTO updateGroupDTO)
     {
