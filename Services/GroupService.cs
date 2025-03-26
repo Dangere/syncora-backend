@@ -14,7 +14,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.SharedUsers).SingleOrDefaultAsync(g => g.Id == groupId);
 
         if (groupEntity == null)
             return Result<GroupDTO>.Error("Group does not exist.", 404);
@@ -54,7 +54,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<string>.Error("User does not exist.", 404);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).SingleOrDefaultAsync(g => g.Id == groupId);
 
         // Make sure the group exists
         if (groupEntity == null)
@@ -104,12 +104,12 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     public async Task<Result<string>> AllowAccessToGroup(int groupId, int userId, string userNameToGrant, bool allowAccess)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).FirstOrDefaultAsync(g => g.Id == groupId);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.SharedUsers).SingleOrDefaultAsync(g => g.Id == groupId);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", 404);
 
-        UserEntity? userToGrant = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
+        UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
 
         if (userToGrant == null)
             return Result<string>.Error("User does not exist.", 404);
