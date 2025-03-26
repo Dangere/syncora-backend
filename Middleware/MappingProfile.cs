@@ -11,7 +11,7 @@ public class MappingProfile : Profile
     public MappingProfile()
     {
         CreateMap<TaskEntity, TaskDTO>();
-        CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.SharedUsers, opt => opt.MapFrom(src => src.SharedUsers.Select(u => u.UserName)));
+        CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members.Select(u => u.UserName)));
         CreateMap<UserEntity, string>().ConvertUsing(u => u.UserName);
 
         // Configure the mapping from UserEntity to UserDTO and vice versa

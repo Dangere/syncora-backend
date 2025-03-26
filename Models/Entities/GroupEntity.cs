@@ -17,7 +17,7 @@ public class GroupEntity
     public required int OwnerUserId { get; set; }
     public UserEntity OwnerUser { get; set; } = null!;
 
-    public HashSet<UserEntity> SharedUsers { get; } = [];
+    public HashSet<UserEntity> Members { get; } = [];
 
 
     public HashSet<TaskEntity> Tasks { get; } = [];

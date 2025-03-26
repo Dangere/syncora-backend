@@ -7,5 +7,5 @@ public record class GroupDTO(
     string? Description,
     DateTime CreationDate,
     int OwnerUserId,
-    string[] SharedUsers
+    string[] Members
 );

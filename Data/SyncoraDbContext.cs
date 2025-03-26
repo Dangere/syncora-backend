@@ -22,7 +22,7 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         modelBuilder.Entity<UserEntity>().HasMany(u => u.OwnedGroups).WithOne(tg => tg.OwnerUser).HasForeignKey(tg => tg.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
 
         // Many-to-Many: A group can be accessed by multiple users, while users can have access to multiple group
-        modelBuilder.Entity<UserEntity>().HasMany(u => u.AccessibleGroups).WithMany(tg => tg.SharedUsers);
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.AccessibleGroups).WithMany(tg => tg.Members);
 
         base.OnModelCreating(modelBuilder);
     }
