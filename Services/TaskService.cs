@@ -11,45 +11,87 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
-    // public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId)
-    // {
-    //     List<TaskDTO> tasks = await _dbContext.Tasks.Include(t => t.SharedUsers).AsNoTracking().Where(t => t.OwnerUserId == userId).OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToListAsync();
+    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.Tasks).SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
+        if (groupEntity == null)
+            return Result<List<TaskDTO>>.Error("Group does not exist.", 404);
 
-    //     return Result<List<TaskDTO>>.Success(tasks);
-    // }
+        List<TaskDTO> tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
 
-    // public async Task<Result<TaskDTO>> GetTaskForUser(int taskId, int userId)
-    // {
-    //     TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
-    //     if (taskEntity == null)
-    //         return Result<TaskDTO>.Error("Task does not exist.", 404);
+        return Result<List<TaskDTO>>.Success(tasks);
+    }
 
-    //     bool hasAccess = taskEntity.OwnerUserId == userId || taskEntity.SharedUsers.Any(u => u.Id == userId);
+    public async Task<Result<TaskDTO>> GetTaskForUser(int taskId, int userId, int groupId)
+    {
 
-    //     if (!hasAccess)
-    //         return Result<TaskDTO>.Error("User has no access to this task.", 403);
-    //     return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
-    // }
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId);
+        if (groupEntity == null)
+            return Result<TaskDTO>.Error("Group does not exist.", 404);
 
-    // public async Task<Result<string>> UpdateTaskForUser(int taskId, int userId, UpdateTaskDTO updatedTaskDTO)
-    // {
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        if (taskEntity == null)
+            return Result<TaskDTO>.Error("Task does not exist.", 404);
 
-    //     TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        bool hasAccess = groupEntity.OwnerUserId == userId || groupEntity.Members.Any(u => u.Id == userId);
 
-    //     if (taskEntity == null)
-    //         return Result<string>.Error("Task does not exist.", 404);
+        if (!hasAccess)
+            return Result<TaskDTO>.Error("User has no access to this task.", 403);
+        return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
+    }
 
-    //     bool isOwner = taskEntity.OwnerUserId == userId;
-    //     bool isShared = taskEntity.SharedUsers.Any(u => u.Id == userId);
-    //     if (!isOwner && isShared)
-    //     {
-    //         return Result<string>.Error("A shared user can't update the details of a task they don't own", 403);
-    //     }
-    //     else if (!isOwner && !isShared)
-    //         return Result<string>.Error("User has no access to this task.", 403);
+    public async Task<Result<string>> UpdateTaskForUser(int taskId, int groupId, int userId, UpdateTaskDTO updatedTaskDTO)
+    {
 
-    //     return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
-    // }
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", 404);
+
+
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+
+        if (taskEntity == null)
+            return Result<string>.Error("Task does not exist.", 404);
+
+        bool isOwner = groupEntity.OwnerUserId == userId;
+        bool isShared = groupEntity.Members.Any(u => u.Id == userId);
+        if (!isOwner && isShared)
+        {
+            return Result<string>.Error("A shared user can't update the details of tasks in groups they don't own", 403);
+        }
+        else if (!isOwner && !isShared)
+            return Result<string>.Error("User has no access to this task.", 403);
+
+        return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
+    }
+
+    public async Task<Result<string>> DeleteTaskForUser(int taskId, int groupId, int userId)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", 404);
+
+
+        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+
+        if (taskEntity == null)
+            return Result<string>.Error("Task does not exist.", 404);
+
+        bool isOwner = groupEntity.OwnerUserId == userId;
+        bool isShared = groupEntity.Members.Any(u => u.Id == userId);
+        if (!isOwner && isShared)
+        {
+            return Result<string>.Error("A shared user can't delete tasks in groups they don't own", 403);
+        }
+        else if (!isOwner && !isShared)
+            return Result<string>.Error("User has no access to this task.", 403);
+
+        _dbContext.Tasks.Remove(taskEntity);
+        await _dbContext.SaveChangesAsync();
+
+        return Result<string>.Success("Task deleted.");
+    }
+
 
     // public async Task<Result<string>> AllowAccessToTask(int taskId, int userId, string userNameToGrant, bool allowAccess)
     // {
@@ -109,21 +151,24 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     //     return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     // }
 
-    // public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int userId)
-    // {
-    //     // Make sure the user exists
-    //     if (await _dbContext.Users.FindAsync(userId) == null)
-    //         return Result<TaskDTO>.Error("User does not exist.", 404);
-
-    //     TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, OwnerUserId = userId };
-
-    //     await _dbContext.Tasks.AddAsync(createdTask);
-    //     await _dbContext.SaveChangesAsync();
-
-    //     return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
-    // }
-    public async Task<Result<string>> UpdateTask(int id, UpdateTaskDTO updatedTaskDTO)
+    public async Task<Result<TaskDTO>> CreateTaskForUser(CreateTaskDTO newTaskDTO, int userId, int groupId)
     {
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
+        if (groupEntity == null)
+            return Result<TaskDTO>.Error("Group does not exist.", 404);
+
+        TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, GroupId = groupId };
+
+        await _dbContext.Tasks.AddAsync(createdTask);
+        await _dbContext.SaveChangesAsync();
+
+        return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
+    }
+    public async Task<Result<string>> UpdateTask(int id, int groupId, UpdateTaskDTO updatedTaskDTO)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId);
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", 404);
 
         TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
 

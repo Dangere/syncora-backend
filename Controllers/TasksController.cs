@@ -4,12 +4,13 @@ using TaskManagementWebAPI.Attributes;
 using TaskManagementWebAPI.Enums;
 using TaskManagementWebAPI.Models.DTOs.Tasks;
 using TaskManagementWebAPI.Services;
+using System.Security.Claims;
 
 namespace TaskManagementWebAPI.Controllers;
 
 [AuthorizeRoles(UserRole.Admin)]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/groups/{groupId}/[controller]")]
 public class TasksController(TaskService taskService) : ControllerBase
 {
     private readonly TaskService _taskService = taskService;
@@ -17,62 +18,68 @@ public class TasksController(TaskService taskService) : ControllerBase
     private const string _getTaskEndpointName = "GetTask";
 
 
-    // //GET /tasks
-    // [HttpGet]
-    // public async Task<IActionResult> GetAllTasks()
-    // {
-    //     Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetAllTaskDTOs();
-
-    //     if (!tasksFetchResult.IsSuccess)
-    //         return StatusCode(tasksFetchResult.ErrorStatusCode, tasksFetchResult.ErrorMessage);
-
-    //     return Ok(tasksFetchResult.Data!);
-    // }
-
-    // //GET /tasks/1
-    // [HttpGet("{id}", Name = _getTaskEndpointName)]
-    // public async Task<IActionResult> GetTask(int id)
-    // {
-    //     Result<TaskDTO> taskFetchResult = await _taskService.GetTaskDTO(id);
-
-    //     if (!taskFetchResult.IsSuccess)
-    //         return StatusCode(taskFetchResult.ErrorStatusCode, taskFetchResult.ErrorMessage);
-
-    //     return Ok(taskFetchResult.Data);
-    // }
-
-    // //POST /tasks
-    // [HttpPost("{userId}/tasks")]
-    // public async Task<IActionResult> PostTask([FromRoute] int userId, [FromBody] CreateTaskDTO newTask)
-    // {
-    //     Result<TaskDTO> createdTaskResult = await _taskService.CreateTask(newTask, userId);
-
-    //     if (!createdTaskResult.IsSuccess)
-    //         return StatusCode(createdTaskResult.ErrorStatusCode, createdTaskResult.ErrorMessage);
-
-    //     return CreatedAtRoute(_getTaskEndpointName, new { id = createdTaskResult.Data!.Id }, createdTaskResult.Data!);
-    // }
-
-    //PUT /tasks/id
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDTO updatedTaskDTO)
+    [HttpGet]
+    public async Task<IActionResult> GetTasks(int groupId)
     {
-        Result<string> updatedResult = await _taskService.UpdateTask(id, updatedTaskDTO);
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        if (!updatedResult.IsSuccess)
-            return StatusCode(updatedResult.ErrorStatusCode, updatedResult.ErrorMessage);
+        Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasksForUser(userId, groupId);
+
+        if (!tasksFetchResult.IsSuccess)
+            return StatusCode(tasksFetchResult.ErrorStatusCode, tasksFetchResult.ErrorMessage);
+
+        return Ok(tasksFetchResult.Data!);
+    }
+
+
+    [HttpGet("{taskId}", Name = _getTaskEndpointName)]
+    public async Task<IActionResult> GetTask(int taskId, int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<TaskDTO> fetchResult = await _taskService.GetTaskForUser(taskId, userId, groupId);
+
+        if (!fetchResult.IsSuccess)
+            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
+
+        return Ok(fetchResult.Data);
+    }
+
+    [HttpPost()]
+    public async Task<IActionResult> CreateTask([FromBody] CreateTaskDTO newTaskDTO, int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<TaskDTO> createdResult = await _taskService.CreateTaskForUser(newTaskDTO, userId, groupId);
+
+        if (!createdResult.IsSuccess)
+            return StatusCode(createdResult.ErrorStatusCode, createdResult.ErrorMessage);
+
+        return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdResult.Data!.Id }, createdResult.Data!);
+    }
+
+    [HttpPut("{taskId}")]
+    public async Task<IActionResult> UpdateTask([FromBody] UpdateTaskDTO updatedTaskDTO, int taskId, int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> updateResult = await _taskService.UpdateTaskForUser(taskId, groupId, userId, updatedTaskDTO);
+
+        if (!updateResult.IsSuccess)
+            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
 
         return NoContent();
     }
 
-    //DELETE /tasks/1
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteTask(int id)
+    [HttpDelete("{taskId}")]
+    public async Task<IActionResult> DeleteTask(int taskId, int groupId)
     {
-        Result<string> deletedResult = await _taskService.RemoveTask(id);
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        if (!deletedResult.IsSuccess)
-            return StatusCode(deletedResult.ErrorStatusCode, deletedResult.ErrorMessage);
+        Result<string> deleteResult = await _taskService.DeleteTaskForUser(taskId, groupId, userId);
+
+        if (!deleteResult.IsSuccess)
+            return StatusCode(deleteResult.ErrorStatusCode, deleteResult.ErrorMessage);
 
         return NoContent();
     }
