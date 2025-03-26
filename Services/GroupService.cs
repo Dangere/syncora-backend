@@ -121,6 +121,10 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
             return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
 
 
+        if (groupEntity.OwnerUserId == userToGrant.Id)
+            return Result<string>.Error("You can't grant or revoke access to yourself as the group owner.", 400);
+
+
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.Members.Any(u => u.Id == userId);
         if (!isOwner && isShared)
