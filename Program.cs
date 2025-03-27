@@ -1,5 +1,8 @@
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TaskManagementWebAPI.Data;
@@ -44,6 +47,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        string clientUsername = httpContext.User.FindFirstValue(ClaimTypes.Name) ?? httpContext.Request.Headers.Host.ToString();
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey: clientUsername, factory: _ =>
+        {
+            return new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100, // Max 100 requests
+                Window = TimeSpan.FromMinutes(1), // Per 1 minute window
+                QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
+            };
+        });
+
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -51,6 +74,7 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
 app.UseRouting();
+app.UseRateLimiter();
 app.MapControllers();
 
 // Using authentication and authorization middleware to secure endpoints
