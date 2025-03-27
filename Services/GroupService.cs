@@ -17,12 +17,12 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.Members).SingleOrDefaultAsync(g => g.Id == groupId);
 
         if (groupEntity == null)
-            return Result<GroupDTO>.Error("Group does not exist.", 404);
+            return Result<GroupDTO>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
         if (groupEntity.OwnerUserId == userId || groupEntity.Members.Any(u => u.Id == userId))
             return new Result<GroupDTO>(_mapper.Map<GroupDTO>(groupEntity));
 
-        return Result<GroupDTO>.Error("User has no access to this group.", 403);
+        return Result<GroupDTO>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
     }
 
@@ -39,7 +39,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
     {
         // Make sure the user exists
         if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<GroupDTO>.Error("User does not exist.", 404);
+            return Result<GroupDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
         GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, OwnerUserId = userId };
 
@@ -54,22 +54,22 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
     {
         // Make sure the user exists
         if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", 404);
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Members).SingleOrDefaultAsync(g => g.Id == groupId);
 
         // Make sure the group exists
         if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", 404);
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.Members.Any(u => u.Id == userId);
         if (!isOwner && isShared)
         {
-            return Result<string>.Error("A shared user can't update the details of a group they don't own", 403);
+            return Result<string>.Error("A shared user can't update the details of a group they don't own", StatusCodes.Status403Forbidden);
         }
         else if (!isOwner && !isShared)
-            return Result<string>.Error("User has no access to this group.", 403);
+            return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
         return await UpdateGroupEntity(groupEntity, updateGroupDTO);
     }
@@ -78,21 +78,21 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
     {
         // Make sure the user exists
         if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", 404);
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Members).FirstOrDefaultAsync(g => g.Id == groupId);
         // Make sure the group exists
         if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", 404);
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.Members.Any(u => u.Id == userId);
         if (!isOwner && isShared)
         {
-            return Result<string>.Error("A shared user can't delete a group they don't own", 403);
+            return Result<string>.Error("A shared user can't delete a group they don't own", StatusCodes.Status403Forbidden);
         }
         else if (!isOwner && !isShared)
-            return Result<string>.Error("User has no access to this group.", 403);
+            return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
 
         _dbContext.Groups.Remove(groupEntity);
@@ -109,12 +109,12 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Members).SingleOrDefaultAsync(g => g.Id == groupId);
 
         if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", 404);
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
         UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
 
         if (userToGrant == null)
-            return Result<string>.Error("User does not exist.", 404);
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
 
         if (allowAccess == groupEntity.Members.Any(u => u.Id == userToGrant.Id))
@@ -129,10 +129,10 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         bool isShared = groupEntity.Members.Any(u => u.Id == userId);
         if (!isOwner && isShared)
         {
-            return Result<string>.Error("A shared user can't " + (allowAccess ? "grant" : "revoke") + " access to a group they don't own", 403);
+            return Result<string>.Error("A shared user can't " + (allowAccess ? "grant" : "revoke") + " access to a group they don't own", StatusCodes.Status403Forbidden);
         }
         else if (!isOwner && !isShared)
-            return Result<string>.Error("User has no access to this group.", 403);
+            return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
         if (allowAccess)
             groupEntity.Members.Add(userToGrant);
