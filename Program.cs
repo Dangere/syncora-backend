@@ -65,6 +65,21 @@ builder.Services.AddRateLimiter(options =>
 
     });
 
+    options.AddPolicy("auth-policy", httpContext =>
+    {
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey: clientIp, factory: _ =>
+        {
+            return new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10, // Max 10 requests
+                Window = TimeSpan.FromMinutes(1), // Per 1 minute window
+                QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
+            };
+        });
+    });
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 builder.Services.AddAuthorization();

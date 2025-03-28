@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TaskManagementWebAPI.Models.DTOs.Auth;
 using TaskManagementWebAPI.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TaskManagementWebAPI.Controllers;
 
@@ -12,6 +13,7 @@ namespace TaskManagementWebAPI.Controllers;
 [AllowAnonymous]
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("auth-policy")]
 public class AuthenticationController(AuthService authService) : ControllerBase
 {
     private readonly AuthService _authService = authService;
