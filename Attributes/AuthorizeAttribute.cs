@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using TaskManagementWebAPI.Enums;
+using SyncoraBackend.Enums;
 
-namespace TaskManagementWebAPI.Attributes;
+namespace SyncoraBackend.Attributes;
 
 public class AuthorizeRolesAttribute : AuthorizeAttribute
 {

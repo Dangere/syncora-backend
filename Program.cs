@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using TaskManagementWebAPI.Data;
-using TaskManagementWebAPI.Services;
+using SyncoraBackend.Data;
+using SyncoraBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

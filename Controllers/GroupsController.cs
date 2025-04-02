@@ -1,12 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using TaskManagementWebAPI.Attributes;
-using TaskManagementWebAPI.Enums;
-using TaskManagementWebAPI.Models.DTOs.Groups;
-using TaskManagementWebAPI.Services;
-using TaskManagementWebAPI.Utilities;
+using SyncoraBackend.Attributes;
+using SyncoraBackend.Enums;
+using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Services;
+using SyncoraBackend.Utilities;
 
-namespace TaskManagementWebAPI.Controllers;
+namespace SyncoraBackend.Controllers;
 
 [AuthorizeRoles(UserRole.Admin, UserRole.User)]
 [ApiController]

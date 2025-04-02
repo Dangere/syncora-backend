@@ -3,9 +3,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using TaskManagementWebAPI.Models.Entities;
+using SyncoraBackend.Models.Entities;
 
-namespace TaskManagementWebAPI.Services;
+namespace SyncoraBackend.Services;
 
 public class TokenService(IConfiguration configuration)
 {

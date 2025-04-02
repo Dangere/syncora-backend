@@ -1,14 +1,14 @@
 using AutoMapper;
-using TaskManagementWebAPI.Utilities;
+using SyncoraBackend.Utilities;
 using Microsoft.EntityFrameworkCore;
-using TaskManagementWebAPI.Data;
-using TaskManagementWebAPI.Enums;
-using TaskManagementWebAPI.Models.DTOs.Auth;
-using TaskManagementWebAPI.Models.DTOs.Users;
-using TaskManagementWebAPI.Models.Entities;
+using SyncoraBackend.Data;
+using SyncoraBackend.Enums;
+using SyncoraBackend.Models.DTOs.Auth;
+using SyncoraBackend.Models.DTOs.Users;
+using SyncoraBackend.Models.Entities;
 
 
-namespace TaskManagementWebAPI.Services;
+namespace SyncoraBackend.Services;
 public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService)
 {
     private readonly IMapper _mapper = mapper;

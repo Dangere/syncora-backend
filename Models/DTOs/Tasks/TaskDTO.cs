@@ -1,4 +1,4 @@
-namespace TaskManagementWebAPI.Models.DTOs.Tasks;
+namespace SyncoraBackend.Models.DTOs.Tasks;
 
 
 public record class TaskDTO(

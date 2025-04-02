@@ -1,12 +1,12 @@
 
-using TaskManagementWebAPI.Utilities;
+using SyncoraBackend.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using TaskManagementWebAPI.Models.DTOs.Auth;
-using TaskManagementWebAPI.Services;
+using SyncoraBackend.Models.DTOs.Auth;
+using SyncoraBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace TaskManagementWebAPI.Controllers;
+namespace SyncoraBackend.Controllers;
 
 
 // This controller doesn't have authorization, can be accessed by anyone

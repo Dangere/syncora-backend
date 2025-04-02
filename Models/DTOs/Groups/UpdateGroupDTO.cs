@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TaskManagementWebAPI.Models.DTOs.Groups;
+namespace SyncoraBackend.Models.DTOs.Groups;
 
 public record UpdateGroupDTO(string? Title, string? Description) : IValidatableObject
 {

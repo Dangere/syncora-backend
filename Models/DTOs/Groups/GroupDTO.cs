@@ -1,4 +1,4 @@
-namespace TaskManagementWebAPI.Models.DTOs.Groups;
+namespace SyncoraBackend.Models.DTOs.Groups;
 
 //Need to return some information about the tasks inside it
 public record class GroupDTO(

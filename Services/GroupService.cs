@@ -1,12 +1,12 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
-using TaskManagementWebAPI.Data;
-using TaskManagementWebAPI.Models.DTOs.Groups;
-using TaskManagementWebAPI.Models.Entities;
-using TaskManagementWebAPI.Utilities;
+using SyncoraBackend.Data;
+using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Models.Entities;
+using SyncoraBackend.Utilities;
 
-namespace TaskManagementWebAPI.Services;
+namespace SyncoraBackend.Services;
 public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;

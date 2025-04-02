@@ -1,4 +1,4 @@
-namespace TaskManagementWebAPI.Enums;
+namespace SyncoraBackend.Enums;
 public enum UserRole
 {
     User,

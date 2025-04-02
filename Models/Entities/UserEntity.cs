@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using TaskManagementWebAPI.Enums;
+using SyncoraBackend.Enums;
 
-namespace TaskManagementWebAPI.Models.Entities;
+namespace SyncoraBackend.Models.Entities;
 
 [Table("users", Schema = "public")]
 public class UserEntity

@@ -1,11 +1,11 @@
 using AutoMapper;
-using TaskManagementWebAPI.Models.Entities;
-using TaskManagementWebAPI.Models.DTOs.Tasks;
-using TaskManagementWebAPI.Models.DTOs.Users;
-using TaskManagementWebAPI.Models.DTOs.Groups;
-using TaskManagementWebAPI.Enums;
+using SyncoraBackend.Models.Entities;
+using SyncoraBackend.Models.DTOs.Tasks;
+using SyncoraBackend.Models.DTOs.Users;
+using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Enums;
 
-namespace TaskManagementWebAPI.Middleware;
+namespace SyncoraBackend.Middleware;
 public class MappingProfile : Profile
 {
     public MappingProfile()

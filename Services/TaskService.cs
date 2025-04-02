@@ -1,11 +1,11 @@
 using AutoMapper;
-using TaskManagementWebAPI.Models.Entities;
-using TaskManagementWebAPI.Models.DTOs.Tasks;
-using TaskManagementWebAPI.Data;
+using SyncoraBackend.Models.Entities;
+using SyncoraBackend.Models.DTOs.Tasks;
+using SyncoraBackend.Data;
 using Microsoft.EntityFrameworkCore;
-using TaskManagementWebAPI.Utilities;
+using SyncoraBackend.Utilities;
 
-namespace TaskManagementWebAPI.Services;
+namespace SyncoraBackend.Services;
 public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;

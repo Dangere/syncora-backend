@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-namespace TaskManagementWebAPI.Utilities;
+namespace SyncoraBackend.Utilities;
 
 public static class Validators
 {

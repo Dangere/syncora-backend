@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace TaskManagementWebAPI.Models.Entities;
+namespace SyncoraBackend.Models.Entities;
 
 [Table("groups", Schema = "public")]
 public class GroupEntity

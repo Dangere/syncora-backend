@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-namespace TaskManagementWebAPI.Utilities;
+namespace SyncoraBackend.Utilities;
 public static class Hashing
 {
 

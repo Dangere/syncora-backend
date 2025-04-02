@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using TaskManagementWebAPI.Models.Entities;
+using SyncoraBackend.Models.Entities;
 
-namespace TaskManagementWebAPI.Data;
+namespace SyncoraBackend.Data;
 
 public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbContext(options)
 {

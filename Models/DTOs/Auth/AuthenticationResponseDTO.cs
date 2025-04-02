@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using TaskManagementWebAPI.Models.DTOs.Users;
+using SyncoraBackend.Models.DTOs.Users;
 
-namespace TaskManagementWebAPI.Models.DTOs.Auth;
+namespace SyncoraBackend.Models.DTOs.Auth;
 public record AuthenticationResponseDTO([Required] string AccessToken, [Required] UserDTO UserData);

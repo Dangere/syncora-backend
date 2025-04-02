@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TaskManagementWebAPI.Models.DTOs.Tasks;
+namespace SyncoraBackend.Models.DTOs.Tasks;
 
 public record class CreateTaskDTO(
     [Required] string Title,

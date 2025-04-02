@@ -1,5 +1,5 @@
 
-namespace TaskManagementWebAPI.Utilities;
+namespace SyncoraBackend.Utilities;
 
 //This class is used to return a value and an error message if there is one
 //T is the type of the value that is returned

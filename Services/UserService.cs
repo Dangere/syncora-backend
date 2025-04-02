@@ -1,7 +1,7 @@
-using TaskManagementWebAPI.Data;
-using TaskManagementWebAPI.Models.Entities;
+using SyncoraBackend.Data;
+using SyncoraBackend.Models.Entities;
 
-namespace TaskManagementWebAPI.Services;
+namespace SyncoraBackend.Services;
 
 public class UserService(SyncoraDbContext dbContext)
 {
