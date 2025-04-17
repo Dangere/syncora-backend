@@ -27,7 +27,7 @@ public class TokenService(IConfiguration configuration)
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.Role, user.Role.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName)
+            new(ClaimTypes.Name, user.Username)
         };
 
         var jwtConfig = _config.GetSection("Jwt");

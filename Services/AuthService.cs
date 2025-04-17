@@ -52,13 +52,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
 
         // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email) || EF.Functions.ILike(u.UserName, userName));
+        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email) || EF.Functions.ILike(u.Username, userName));
         if (userWithSameEmailOrUserName != null)
         {
             if (userWithSameEmailOrUserName.Email == email)
                 return Result<AuthenticationResponseDTO>.Error("Email is already in use.");
 
-            if (userWithSameEmailOrUserName.UserName == userName)
+            if (userWithSameEmailOrUserName.Username == userName)
                 return Result<AuthenticationResponseDTO>.Error("Username is already in use.");
         }
 
@@ -66,7 +66,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         byte[] salt = Hashing.GenerateSalt();
         string hash = Hashing.HashPassword(password, salt);
 
-        UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, Role = UserRole.User, UserName = userName };
+        UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, Role = UserRole.User, Username = userName };
 
         // Save user
         await _dbContext.Users.AddAsync(user);

@@ -8,7 +8,7 @@ public class UserEntity
 {
     public int Id { get; set; }
     public required string Email { get; set; }
-    public required string UserName { get; set; }
+    public required string Username { get; set; }
     public required string Hash { get; set; }
     public required string Salt { get; set; }
 

@@ -33,7 +33,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> RegisterWithEmailAndPassword([FromBody] RegisterRequestDTO registerRequest)
     {
-        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.UserName);
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.Username);
 
         if (!registerResult.IsSuccess)
             return BadRequest(registerResult.ErrorMessage);

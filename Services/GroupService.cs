@@ -111,7 +111,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
-        UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.UserName, userNameToGrant));
+        UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.Username, userNameToGrant));
 
         if (userToGrant == null)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
