@@ -18,14 +18,18 @@ public class TaskEntity
 
     public bool Completed { get; set; } = false;
 
+    public int? CompletedById { get; set; } = null;
+    public UserEntity? CompletedBy { get; set; } = null;
+
     [Required]
     public required DateTime CreationDate { get; set; }
-
-    public DateTime? LastUpdateDate { get; set; }
 
     [Required]
     public required int GroupId { get; set; }
     // Navigation Properties
     public GroupEntity Group { get; set; } = null!;
+
+    [Required]
+    public required DateTime LastModifiedDate { get; set; }
 
 }

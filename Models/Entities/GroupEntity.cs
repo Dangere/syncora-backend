@@ -22,5 +22,8 @@ public class GroupEntity
 
     public HashSet<TaskEntity> Tasks { get; } = [];
 
+    [Required]
+    public required DateTime LastModifiedDate { get; set; }
+
 
 }

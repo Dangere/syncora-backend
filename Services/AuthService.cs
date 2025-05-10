@@ -66,7 +66,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         byte[] salt = Hashing.GenerateSalt();
         string hash = Hashing.HashPassword(password, salt);
 
-        UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, Role = UserRole.User, Username = userName };
+        UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, Role = UserRole.User, Username = userName };
 
         // Save user
         await _dbContext.Users.AddAsync(user);

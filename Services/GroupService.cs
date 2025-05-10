@@ -28,11 +28,20 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     // TODO: Add pagination
     // Returns groups owned by the user or shared with the user
-    public async Task<Result<GroupDTO[]>> GetGroups(int userId)
+    public async Task<Result<List<GroupDTO>>> GetGroups(int userId, DateTime? since = null)
     {
-        GroupDTO[] groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId || g.Members.Any(u => u.Id == userId)).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToArrayAsync();
+        List<GroupDTO> groups;
+        if (since != null)
+        {
+            groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId || g.Members.Any(u => u.Id == userId) && g.LastModifiedDate > since).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
+        }
+        else
+        {
+            groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId || g.Members.Any(u => u.Id == userId)).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
 
-        return new Result<GroupDTO[]>(groups);
+        }
+
+        return new Result<List<GroupDTO>>(groups);
     }
 
     public async Task<Result<GroupDTO>> CreateGroup(CreateGroupDTO createGroupDTO, int userId)
@@ -41,7 +50,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<GroupDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, OwnerUserId = userId };
+        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, OwnerUserId = userId };
 
         await _dbContext.Groups.AddAsync(createdGroup);
         await _dbContext.SaveChangesAsync();
@@ -98,6 +107,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         _dbContext.Groups.Remove(groupEntity);
         await _dbContext.SaveChangesAsync();
 
+        // TODO: Store deleted groups to return in the response for syncing with client
         if (groupEntity.Tasks.Count == 0)
             return Result<string>.Success("Group deleted.");
         else
@@ -138,6 +148,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
             groupEntity.Members.Add(userToGrant);
         else
             groupEntity.Members.Remove(userToGrant);
+        groupEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 
@@ -151,6 +162,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
         groupEntity.Title = updateGroupDTO.Title ?? groupEntity.Title;
         groupEntity.Description = updateGroupDTO.Description ?? groupEntity.Description;
+        groupEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 

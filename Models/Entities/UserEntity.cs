@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using SyncoraBackend.Enums;
 
@@ -8,12 +9,16 @@ public class UserEntity
 {
     public int Id { get; set; }
     public required string Email { get; set; }
+    [Required]
     public required string Username { get; set; }
+    [Required]
     public required string Hash { get; set; }
+    [Required]
     public required string Salt { get; set; }
-
+    [Required]
     public required UserRole Role { get; set; } = UserRole.User;
 
+    [Required]
     public required DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     public string? ProfilePictureURL { get; set; } = null;
@@ -24,4 +29,6 @@ public class UserEntity
 
     // Many-to-Many: A user can access multiple groups, while groups can be accessed by multiple users
     public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
+
+    public required DateTime LastModifiedDate { get; set; }
 }

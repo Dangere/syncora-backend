@@ -21,7 +21,7 @@ public class GroupsController(GroupService groupService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<GroupDTO[]> fetchResult = await _groupService.GetGroups(userId);
+        Result<List<GroupDTO>> fetchResult = await _groupService.GetGroups(userId);
 
         if (!fetchResult.IsSuccess)
             return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);

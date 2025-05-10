@@ -11,13 +11,24 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
-    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId)
+    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId, DateTime? since = null)
     {
+
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.Tasks).SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
         if (groupEntity == null)
             return Result<List<TaskDTO>>.Error("Group does not exist.", StatusCodes.Status404NotFound);
+        List<TaskDTO> tasks;
+        if (since != null)
+        {
+            tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Where(t => t.LastModifiedDate > since).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
+        }
+        else
+        {
+            tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
 
-        List<TaskDTO> tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
+        }
+
+
 
         return Result<List<TaskDTO>>.Success(tasks);
     }
@@ -86,6 +97,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this task.", StatusCodes.Status403Forbidden);
 
+        // TODO: Store deleted tasks to return in the response for syncing with client
         _dbContext.Tasks.Remove(taskEntity);
         await _dbContext.SaveChangesAsync();
 
@@ -157,7 +169,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         if (groupEntity == null)
             return Result<TaskDTO>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
-        TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, GroupId = groupId };
+        TaskEntity createdTask = new() { Title = newTaskDTO.Title, Description = newTaskDTO.Description, CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, GroupId = groupId };
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
@@ -186,7 +198,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
 
 
-
+        // TODO: Store deleted tasks to return in the response for syncing with client
         _dbContext.Tasks.Remove(taskEntity);
         await _dbContext.SaveChangesAsync();
 
@@ -199,7 +211,7 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
         taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
 
         if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
-            taskEntity.LastUpdateDate = DateTime.UtcNow;
+            taskEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
 

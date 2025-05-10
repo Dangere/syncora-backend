@@ -3,7 +3,7 @@ using SyncoraBackend.Models.Entities;
 
 namespace SyncoraBackend.Services;
 
-public class UserService(SyncoraDbContext dbContext)
+public class UsersService(SyncoraDbContext dbContext)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
 
@@ -11,6 +11,12 @@ public class UserService(SyncoraDbContext dbContext)
     {
         return await _dbContext.Users.FindAsync(id);
     }
+
+    // public async Task<List<UserEntity>> GetAccessableUsers(int userId)
+    // {
+
+
+    // }
 
 
 }

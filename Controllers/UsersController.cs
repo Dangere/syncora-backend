@@ -1,9 +1,6 @@
-using System.Security.Claims;
-using SyncoraBackend.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
-using SyncoraBackend.Models.DTOs.Tasks;
 using SyncoraBackend.Services;
 
 

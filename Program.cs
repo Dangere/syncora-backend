@@ -21,7 +21,7 @@ builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<GroupService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<UsersService>();
 
 // Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
