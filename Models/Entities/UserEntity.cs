@@ -31,4 +31,14 @@ public class UserEntity
     public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
 
     public required DateTime LastModifiedDate { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is UserEntity other && Id == other.Id;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }

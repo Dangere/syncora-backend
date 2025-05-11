@@ -26,4 +26,13 @@ public class GroupEntity
     public required DateTime LastModifiedDate { get; set; }
 
 
+    public override bool Equals(object? obj)
+    {
+        return obj is GroupEntity other && Id == other.Id;
+    }
+
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
 }
