@@ -6,6 +6,7 @@ public record class TaskDTO(
     string Title,
     string? Description,
     bool Completed,
+    int? CompletedById,
     DateTime CreationDate,
     DateTime? LastUpdateDate,
     int GroupId
