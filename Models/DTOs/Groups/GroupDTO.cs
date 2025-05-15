@@ -6,6 +6,7 @@ public record class GroupDTO(
     string Title,
     string? Description,
     DateTime CreationDate,
+    DateTime LastModifiedDate,
     int OwnerUserId,
     string[] Members
 );

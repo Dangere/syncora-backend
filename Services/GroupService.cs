@@ -28,12 +28,12 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     // TODO: Add pagination
     // Returns groups owned by the user or shared with the user
-    public async Task<Result<List<GroupDTO>>> GetGroups(int userId, DateTime? since = null)
+    public async Task<Result<List<GroupDTO>>> GetGroups(int userId, DateTime? sinceUtc = null)
     {
         List<GroupDTO> groups;
-        if (since != null)
+        if (sinceUtc != null)
         {
-            groups = await _dbContext.Groups.AsNoTracking().Where(g => g.OwnerUserId == userId || g.Members.Any(u => u.Id == userId) && g.LastModifiedDate > since).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
+            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.Members.Any(u => u.Id == userId)) && g.LastModifiedDate > sinceUtc).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
         }
         else
         {

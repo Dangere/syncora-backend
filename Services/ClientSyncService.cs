@@ -5,7 +5,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-class ClientSyncService(GroupService groupService, UsersService userService, TaskService taskService)
+public class ClientSyncService(GroupService groupService, UsersService userService, TaskService taskService)
 {
     private readonly GroupService _groupService = groupService;
     private readonly UsersService _userService = userService;
@@ -14,25 +14,30 @@ class ClientSyncService(GroupService groupService, UsersService userService, Tas
 
     public async Task<Result<Dictionary<string, object>>> SyncSince(int userId, DateTime since)
     {
-        Result<List<GroupDTO>> groups = await _groupService.GetGroups(userId, since);
+        DateTime utcSince = since.Kind == DateTimeKind.Utc ? since : since.ToUniversalTime();
+
+
+        Result<List<GroupDTO>> groups = await _groupService.GetGroups(userId, utcSince);
         if (!groups.IsSuccess)
-            return Result<Dictionary<string, object>>.Error(groups.ErrorMessage!, groups.ErrorStatusCode);
+            return Result<Dictionary<string, object>>.Error(groups.ErrorMessage! + "Getting groups", groups.ErrorStatusCode);
 
         List<TaskDTO> tasks = [];
-        List<UserDTO> users = [];
+        HashSet<UserDTO> users = [];
 
 
         for (int i = 0; i < groups.Data!.Count; i++)
         {
-            Result<List<TaskDTO>> tasksPerGroup = await _taskService.GetTasksForUser(userId, groups.Data[i].Id, since);
+            Result<List<TaskDTO>> tasksPerGroup = await _taskService.GetTasksForUser(userId, groups.Data[i].Id, utcSince);
             if (!tasksPerGroup.IsSuccess)
-                return Result<Dictionary<string, object>>.Error(tasksPerGroup.ErrorMessage!, tasksPerGroup.ErrorStatusCode);
+                return Result<Dictionary<string, object>>.Error(tasksPerGroup.ErrorMessage! + "Getting tasks", tasksPerGroup.ErrorStatusCode);
             tasks.AddRange(tasksPerGroup.Data!);
 
-            Result<List<UserDTO>> usersPerGroup = await _userService.GetUsersInGroup(userId, groups.Data[i].Id, since);
+            Result<List<UserDTO>> usersPerGroup = await _userService.GetUsersInGroup(userId, groups.Data[i].Id, utcSince);
             if (!usersPerGroup.IsSuccess)
-                return Result<Dictionary<string, object>>.Error(usersPerGroup.ErrorMessage!, usersPerGroup.ErrorStatusCode);
-            users.AddRange(usersPerGroup.Data!);
+                return Result<Dictionary<string, object>>.Error(usersPerGroup.ErrorMessage! + "Getting users", usersPerGroup.ErrorStatusCode);
+            usersPerGroup.Data!.ForEach(x => { users.Add(x); });
+
+
         }
 
         Dictionary<string, object> payload = new()

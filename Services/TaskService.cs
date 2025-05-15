@@ -11,26 +11,33 @@ public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
-    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId, DateTime? since = null)
+    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId, DateTime? sinceUtc = null)
     {
 
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.Tasks).SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks).Include(g => g.Members).SingleOrDefaultAsync(g => g.Id == groupId);
         if (groupEntity == null)
             return Result<List<TaskDTO>>.Error("Group does not exist.", StatusCodes.Status404NotFound);
-        List<TaskDTO> tasks;
-        if (since != null)
+
+        if (!(groupEntity.OwnerUserId == userId || groupEntity.Members.Any(u => u.Id == userId)))
         {
-            tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Where(t => t.LastModifiedDate > since).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
+            return Result<List<TaskDTO>>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
+
+        }
+
+        List<TaskDTO> tasksDTO;
+        if (sinceUtc != null)
+        {
+            tasksDTO = groupEntity.Tasks.OrderBy(t => t.CreationDate).Where(t => t.LastModifiedDate > sinceUtc).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
         }
         else
         {
-            tasks = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
+            tasksDTO = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
 
         }
 
 
 
-        return Result<List<TaskDTO>>.Success(tasks);
+        return Result<List<TaskDTO>>.Success(tasksDTO);
     }
 
     public async Task<Result<TaskDTO>> GetTaskForUser(int taskId, int userId, int groupId)
