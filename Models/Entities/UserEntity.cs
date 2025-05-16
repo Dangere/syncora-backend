@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Enums;
 
 namespace SyncoraBackend.Models.Entities;
 
-[Table("users", Schema = "public")]
+[Table("users", Schema = "public"), Index(nameof(Email)), Index(nameof(Username), IsUnique = true), Index(nameof(LastModifiedDate))]
 public class UserEntity
 {
     public int Id { get; set; }

@@ -15,7 +15,7 @@ public class SyncController(ClientSyncService syncService) : ControllerBase
     private readonly ClientSyncService _syncService = syncService;
 
     [HttpPost("{since}")]
-    public async Task<IActionResult> SyncSince([FromRoute] string since)
+    public async Task<IActionResult> SyncSince([FromRoute] string since, [FromQuery] bool includeDeleted = false)
     {
 
         if (!DateTime.TryParse(since, out DateTime formattedSince))
@@ -26,7 +26,7 @@ public class SyncController(ClientSyncService syncService) : ControllerBase
 
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<Dictionary<string, object>> dataResult = await _syncService.SyncSince(userId, formattedSince);
+        Result<Dictionary<string, object>> dataResult = await _syncService.SyncSinceTimestamp(userId, formattedSince, includeDeleted);
 
         if (!dataResult.IsSuccess)
             return StatusCode(dataResult.ErrorStatusCode, dataResult.ErrorMessage);

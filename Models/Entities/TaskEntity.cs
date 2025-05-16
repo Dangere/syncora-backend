@@ -1,12 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace SyncoraBackend.Models.Entities;
 
 
 // public record class TaskEntity(int Id, int UserId, string Title, string Description, bool Completed, DateTime CreatedAt, DateTime? UpdatedAt);
 
-[Table("tasks", Schema = "public")]
+[Table("tasks", Schema = "public"), Index(nameof(LastModifiedDate))]
 public class TaskEntity
 {
     public int Id { get; set; }

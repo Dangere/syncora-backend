@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace SyncoraBackend.Models.Entities;
 
-[Table("groups", Schema = "public")]
+
+[Table("groups", Schema = "public"), Index(nameof(OwnerUserId), nameof(LastModifiedDate))]
 public class GroupEntity
 {
     public int Id { get; set; }
