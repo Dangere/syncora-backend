@@ -6,13 +6,15 @@ using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Enums;
 
 namespace SyncoraBackend.Middleware;
+
 public class MappingProfile : Profile
 {
     public MappingProfile()
     {
         CreateMap<TaskEntity, TaskDTO>();
-        CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.Members, opt => opt.MapFrom(src => src.Members.Select(u => u.Username)));
-        CreateMap<UserEntity, string>().ConvertUsing(u => u.Username);
+        CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.GroupMembers, opt => opt.MapFrom(src => src.GroupMembers.Select(m => m.UserId)));
+        CreateMap<GroupMemberEntity, int>().ConvertUsing(m => m.UserId);
+
 
         // Configure the mapping from UserEntity to UserDTO and vice versa
         // While converting the role enum to string and vice versa

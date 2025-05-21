@@ -22,18 +22,18 @@ public class UsersService(SyncoraDbContext dbContext, IMapper mapper)
 
     public async Task<Result<List<UserDTO>>> GetUsersInGroup(int userId, int groupId, DateTime? sinceUtc = null)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.Members).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId);
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
 
         if (groupEntity == null)
             return Result<List<UserDTO>>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
 
         bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.Members.Any(u => u.Id == userId);
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
         if (!isOwner && !isShared)
             return Result<List<UserDTO>>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
-        HashSet<UserEntity> users = [.. groupEntity.Members, groupEntity.OwnerUser];
+        HashSet<UserEntity> users = [.. groupEntity.GroupMembers.Select(m => m.User), groupEntity.OwnerUser];
         List<UserDTO> usersDTO;
 
         if (sinceUtc == null)

@@ -19,7 +19,9 @@ public class GroupEntity
     public required int OwnerUserId { get; set; }
     public UserEntity OwnerUser { get; set; } = null!;
 
-    public HashSet<UserEntity> Members { get; } = [];
+    // public HashSet<UserEntity> Members { get; } = [];
+    public HashSet<GroupMemberEntity> GroupMembers { get; } = [];
+
 
 
     public HashSet<TaskEntity> Tasks { get; } = [];
@@ -27,6 +29,7 @@ public class GroupEntity
     [Required]
     public required DateTime LastModifiedDate { get; set; }
 
+    public DateTime? DeletedDate { get; set; }
 
     public override bool Equals(object? obj)
     {

@@ -28,8 +28,9 @@ public class UserEntity
     // One-to-Many: A user can own multiple groups, while groups can be owned by only one user
     public HashSet<GroupEntity> OwnedGroups { get; set; } = [];
 
-    // Many-to-Many: A user can access multiple groups, while groups can be accessed by multiple users
-    public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
+    // // Many-to-Many: A user can access multiple groups, while groups can be accessed by multiple users
+    // public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
+    public HashSet<GroupMemberEntity> GroupMemberships { get; set; } = [];
 
     public required DateTime LastModifiedDate { get; set; }
 
