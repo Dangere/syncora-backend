@@ -99,3 +99,5 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "Hello World!");
 app.Run();
+
+public partial class Program { }

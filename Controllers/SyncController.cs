@@ -14,7 +14,7 @@ public class SyncController(ClientSyncService syncService) : ControllerBase
 {
     private readonly ClientSyncService _syncService = syncService;
 
-    [HttpPost("{since}")]
+    [HttpGet("{since}")]
     public async Task<IActionResult> SyncSince([FromRoute] string since, [FromQuery] bool includeDeleted = false)
     {
 

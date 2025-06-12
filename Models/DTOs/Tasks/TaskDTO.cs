@@ -8,6 +8,6 @@ public record class TaskDTO(
     bool Completed,
     int? CompletedById,
     DateTime CreationDate,
-    DateTime? LastUpdateDate,
+    DateTime? LastModifiedDate,
     int GroupId
 );

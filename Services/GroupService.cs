@@ -128,7 +128,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
 
-        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id))
+        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId))
             return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
 
 
@@ -146,12 +146,11 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
         if (allowAccess)
-            groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupEntity.Id, UserId = userToGrant.Id, RoleInGroup = "Member" });
+            groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupId, UserId = userToGrant.Id, RoleInGroup = "Member" });
         else
         {
-            GroupMemberEntity? member = groupEntity.GroupMembers.SingleOrDefault(m => m.UserId == userId);
-            if (member != null)
-                groupEntity.GroupMembers.Remove(member);
+
+            groupEntity.GroupMembers.RemoveWhere(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
         }
         groupEntity.LastModifiedDate = DateTime.UtcNow;
 

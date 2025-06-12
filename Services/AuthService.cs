@@ -9,6 +9,7 @@ using SyncoraBackend.Models.Entities;
 
 
 namespace SyncoraBackend.Services;
+
 public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService)
 {
     private readonly IMapper _mapper = mapper;
@@ -43,12 +44,12 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Validate email's and password's formats
         if (!Validators.ValidateEmail(email))
         {
-            return Result<AuthenticationResponseDTO>.Error("Email is not valid format.");
+            return Result<AuthenticationResponseDTO>.Error("Email is not in valid format.");
 
         }
         if (!Validators.ValidatePassword(password))
         {
-            return Result<AuthenticationResponseDTO>.Error("Password is not valid format.");
+            return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
         }
 
         // Validate availability of email and username

@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.Admin)]
+[AuthorizeRoles(UserRole.User)]
 [ApiController]
 [Route("api/groups/{groupId}/[controller]")]
 public class TasksController(TaskService taskService) : ControllerBase
@@ -55,7 +55,7 @@ public class TasksController(TaskService taskService) : ControllerBase
         if (!createdResult.IsSuccess)
             return StatusCode(createdResult.ErrorStatusCode, createdResult.ErrorMessage);
 
-        return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdResult.Data!.Id }, createdResult.Data!);
+        return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdResult.Data!.Id, groupId }, createdResult.Data!);
     }
 
     [HttpPut("{taskId}")]
