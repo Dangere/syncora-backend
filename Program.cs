@@ -2,10 +2,10 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SyncoraBackend.Data;
+using SyncoraBackend.Hubs;
 using SyncoraBackend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +15,8 @@ builder.Services.AddAutoMapper(typeof(Program));
 
 // Add controllers, Lifecycle: Transient but behaves like scoped because it gets created per HTTP request
 builder.Services.AddControllers();
+
+builder.Services.AddSignalR();
 
 // Add services, Lifecycle: Scoped
 builder.Services.AddScoped<TaskService>();
@@ -44,6 +46,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidIssuer = jwtConfig["Issuer"],  // Expected issuer
         ValidAudience = jwtConfig["Audience"],  // Expected audience
         IssuerSigningKey = key  // Use the stored secret key
+    };
+
+    // We have to hook the OnMessageReceived event in order to
+    // allow the JWT authentication handler to read the access
+    // token from the query string when a WebSocket or 
+    // Server-Sent Events request comes in.
+
+    // Sending the access token in the query string is required when using WebSockets or ServerSentEvents
+    // due to a limitation in Browser APIs. We restrict it to only calls to the
+    // SignalR hub in this code.
+    // See https://docs.microsoft.com/aspnet/core/signalr/security#access-token-logging
+    // for more information about security considerations when using
+    // the query string to transmit the access token.
+    jwtOptions.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for our hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/hubs/sync")))
+            {
+                // Read the token out of the query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 
 });
@@ -97,6 +128,7 @@ app.MapControllers();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<SyncHub>("/Sync");
 app.MapGet("/", () => "Hello World!");
 app.Run();
 

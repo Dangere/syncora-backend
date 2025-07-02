@@ -21,12 +21,10 @@ public class GroupsController(GroupService groupService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<List<GroupDTO>> fetchResult = await _groupService.GetGroups(userId);
+        List<GroupDTO> groups = await _groupService.GetGroups(userId);
 
-        if (!fetchResult.IsSuccess)
-            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
 
-        return Ok(fetchResult.Data);
+        return Ok(groups);
     }
 
     [HttpGet("{groupId}", Name = _getGroupEndpointName)]

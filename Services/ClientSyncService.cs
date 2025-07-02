@@ -56,6 +56,7 @@ public class ClientSyncService(SyncoraDbContext dbContext)
 
         Dictionary<string, object> payload = new()
         {
+            {"timestamp", DateTime.UtcNow},
             { "groups", groupDTOs},
             { "users", userDTOs },
             { "tasks", taskDTOs },

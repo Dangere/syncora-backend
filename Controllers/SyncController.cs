@@ -7,7 +7,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.User)]
+[AuthorizeRoles(UserRole.User, UserRole.Admin)]
 [ApiController]
 [Route("api/sync")]
 public class SyncController(ClientSyncService syncService) : ControllerBase

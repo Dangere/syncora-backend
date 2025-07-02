@@ -29,7 +29,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
     // TODO: Add pagination
     // Returns groups owned by the user or shared with the user
-    public async Task<Result<List<GroupDTO>>> GetGroups(int userId, DateTime? sinceUtc = null)
+    public async Task<List<GroupDTO>> GetGroups(int userId, DateTime? sinceUtc = null)
     {
         List<GroupDTO> groups;
         if (sinceUtc != null)
@@ -42,7 +42,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
         }
 
-        return new Result<List<GroupDTO>>(groups);
+        return groups;
     }
 
     public async Task<Result<GroupDTO>> CreateGroup(CreateGroupDTO createGroupDTO, int userId)
