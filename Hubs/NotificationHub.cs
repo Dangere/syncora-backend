@@ -2,18 +2,21 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
-using SyncoraBackend.Models.DTOs.Groups;
-using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
 [AuthorizeRoles(UserRole.User, UserRole.Admin)]
-public class SyncHub() : Hub
+public class NotificationHub() : Hub
 {
-    // private readonly GroupService _groupService = groupService;
 
-    public async Task SendSyncPayload(int groupId, Dictionary<string, object> payload)
+    public async Task NotifyGroupMembers(int groupId, string message)
     {
-        await Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync", payload);
+        await Clients.Groups($"group-{groupId}").SendAsync("Notify", message);
+    }
+
+    public async Task NotifyAllUsers(string message)
+    {
+        Console.WriteLine(message);
+        await Clients.Groups("SignalR Users").SendAsync("Notify", message);
     }
 
     public override async Task OnConnectedAsync()
@@ -28,6 +31,7 @@ public class SyncHub() : Hub
         //     await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
         // }
 
+        await Groups.AddToGroupAsync(Context.ConnectionId, "SignalR Users");
         await base.OnConnectedAsync();
     }
 

@@ -25,6 +25,9 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<ClientSyncService>();
+builder.Services.AddSingleton<SyncHub>();
+builder.Services.AddSingleton<NotificationHub>();
+
 
 // Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
@@ -128,7 +131,9 @@ app.MapControllers();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHub<SyncHub>("/Sync");
+app.MapHub<SyncHub>("/hubs/sync");
+app.MapHub<SyncHub>("/hubs/notification");
+
 app.MapGet("/", () => "Hello World!");
 app.Run();
 

@@ -2,16 +2,18 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
+using SyncoraBackend.Hubs;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
+public class GroupService(IMapper mapper, SyncoraDbContext dbContext, SyncHub syncHub)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
+    private readonly SyncHub _syncHub = syncHub;
 
     public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
     {
@@ -119,22 +121,6 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
 
-        if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
-
-        UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.Username, userNameToGrant));
-
-        if (userToGrant == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
-
-
-        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId))
-            return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
-
-
-        if (groupEntity.OwnerUserId == userToGrant.Id)
-            return Result<string>.Error("You can't grant or revoke access to yourself as the group owner.", 400);
-
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
@@ -144,6 +130,25 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
         }
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
+
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
+
+        UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.Username, userNameToGrant));
+
+        if (userToGrant == null)
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        if (groupEntity.OwnerUserId == userToGrant.Id)
+            return Result<string>.Error("You can't grant or revoke access to yourself as the group owner.", 400);
+
+        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId))
+            return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
+
+
+
+
+
 
         if (allowAccess)
             groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupId, UserId = userToGrant.Id, RoleInGroup = "Member" });
@@ -156,6 +161,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext)
 
         await _dbContext.SaveChangesAsync();
 
+        await _syncHub.SendSyncPayload(groupId, new Dictionary<string, object>());
         return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
     }
 
