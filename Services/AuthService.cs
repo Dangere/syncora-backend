@@ -109,7 +109,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         int userId = int.Parse(claimsFromExpiredToken.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.RefreshToken == refreshToken && !t.IsRevoked).FirstOrDefaultAsync();
+        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.RefreshToken == refreshToken && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
         if (tokenEntity == null)
             return Result<TokensDTO>.Error("Invalid refresh token.");
