@@ -34,10 +34,12 @@ builder.Services.AddDbContext<SyncoraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(jwtOptions =>
 {
     var jwtConfig = builder.Configuration.GetSection("Jwt");
     SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]!));
+
 
     jwtOptions.TokenValidationParameters = new TokenValidationParameters
     {
@@ -48,7 +50,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
         ValidIssuer = jwtConfig["Issuer"],  // Expected issuer
         ValidAudience = jwtConfig["Audience"],  // Expected audience
-        IssuerSigningKey = key  // Use the stored secret key
+        IssuerSigningKey = key,  // Use the stored secret key
+        ClockSkew = TimeSpan.Zero // Ignore any clock skew so expiration date is accurate
     };
 
     // We have to hook the OnMessageReceived event in order to
@@ -135,6 +138,7 @@ app.MapHub<SyncHub>("/hubs/sync");
 app.MapHub<SyncHub>("/hubs/notification");
 
 app.MapGet("/", () => "Hello World!");
-app.Run();
 
+Console.WriteLine($"\n Running with connection string: {builder.Configuration.GetConnectionString("LocalConnection")}");
+app.Run();
 public partial class Program { }

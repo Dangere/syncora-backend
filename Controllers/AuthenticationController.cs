@@ -5,6 +5,7 @@ using SyncoraBackend.Models.DTOs.Auth;
 using SyncoraBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 namespace SyncoraBackend.Controllers;
 
@@ -39,6 +40,21 @@ public class AuthenticationController(AuthService authService) : ControllerBase
             return BadRequest(registerResult.ErrorMessage);
 
         return Ok(registerResult.Data);
+
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] TokensDTO tokens)
+    {
+
+        Result<TokensDTO> refreshTokenResult = await _authService.RefreshToken(expiredAccessToken: tokens.AccessToken, refreshToken: tokens.RefreshToken);
+
+        if (!refreshTokenResult.IsSuccess)
+            return BadRequest(refreshTokenResult.ErrorMessage);
+
+        return Ok(refreshTokenResult.Data);
+        // This will return a new access token and a new refresh token
+        // We return a refresh token to make sure its rotated in case of a security issue it will log out the user and detect token theft
 
     }
 

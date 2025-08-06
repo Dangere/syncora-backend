@@ -32,6 +32,8 @@ public class UserEntity
     // public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
     public HashSet<GroupMemberEntity> GroupMemberships { get; set; } = [];
 
+    public HashSet<RefreshTokenEntity> RefreshTokens { get; set; } = [];
+
     public required DateTime LastModifiedDate { get; set; }
 
     public override bool Equals(object? obj)
