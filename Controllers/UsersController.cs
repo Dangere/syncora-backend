@@ -9,9 +9,9 @@ namespace SyncoraBackend.Controllers;
 [AuthorizeRoles(UserRole.Admin, UserRole.User)]
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(TaskService taskService) : ControllerBase
+public class UsersController(TasksService taskService) : ControllerBase
 {
-    private readonly TaskService _taskService = taskService;
+    private readonly TasksService _taskService = taskService;
     private const string _getTaskEndpointName = "GetTaskForUser";
 
 

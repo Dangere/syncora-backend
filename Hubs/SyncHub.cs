@@ -7,9 +7,9 @@ using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
 [AuthorizeRoles(UserRole.User, UserRole.Admin)]
-public class SyncHub() : Hub
+public class SyncHub(GroupsService groupService) : Hub
 {
-    // private readonly GroupService _groupService = groupService;
+    private readonly GroupsService _groupService = groupService;
 
     public async Task SendSyncPayload(int groupId, Dictionary<string, object> payload)
     {
@@ -21,12 +21,12 @@ public class SyncHub() : Hub
         int UserId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         Console.WriteLine($"A client has connected, UserId: {UserId}");
 
-        // List<GroupDTO> groups = await _groupService.GetGroups(UserId);
+        List<GroupDTO> groups = await _groupService.GetGroups(UserId);
 
-        // foreach (GroupDTO group in groups)
-        // {
-        //     await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
-        // }
+        foreach (GroupDTO group in groups)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
+        }
 
         await base.OnConnectedAsync();
     }

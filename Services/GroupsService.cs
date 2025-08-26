@@ -9,7 +9,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class GroupService(IMapper mapper, SyncoraDbContext dbContext, SyncHub syncHub)
+public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, SyncHub syncHub)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
@@ -121,6 +121,8 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext, SyncHub sy
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
 
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
@@ -131,8 +133,7 @@ public class GroupService(IMapper mapper, SyncoraDbContext dbContext, SyncHub sy
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
-        if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
+
 
         UserEntity? userToGrant = await _dbContext.Users.SingleOrDefaultAsync(u => EF.Functions.ILike(u.Username, userNameToGrant));
 

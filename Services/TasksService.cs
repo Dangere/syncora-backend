@@ -7,7 +7,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class TaskService(IMapper mapper, SyncoraDbContext dbContext)
+public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;

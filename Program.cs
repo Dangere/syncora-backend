@@ -19,8 +19,8 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 // Add services, Lifecycle: Scoped
-builder.Services.AddScoped<TaskService>();
-builder.Services.AddScoped<GroupService>();
+builder.Services.AddScoped<TasksService>();
+builder.Services.AddScoped<GroupsService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UsersService>();

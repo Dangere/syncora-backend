@@ -11,9 +11,9 @@ namespace SyncoraBackend.Controllers;
 [AuthorizeRoles(UserRole.Admin, UserRole.User)]
 [ApiController]
 [Route("api/[controller]")]
-public class GroupsController(GroupService groupService) : ControllerBase
+public class GroupsController(GroupsService groupService) : ControllerBase
 {
-    private readonly GroupService _groupService = groupService;
+    private readonly GroupsService _groupService = groupService;
     private const string _getGroupEndpointName = "GetGroup";
 
     [HttpGet()]
