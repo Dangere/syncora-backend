@@ -104,7 +104,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
         catch (Exception e)
         {
-            return Result<TokensDTO>.Error(e.Message);
+            return Result<TokensDTO>.Error(e.Message, StatusCodes.Status401Unauthorized);
         }
 
         int userId = int.Parse(claimsFromExpiredToken.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -112,7 +112,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.RefreshToken == refreshToken && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
         if (tokenEntity == null)
-            return Result<TokensDTO>.Error("Invalid refresh token.");
+            return Result<TokensDTO>.Error("Invalid refresh token.", StatusCodes.Status401Unauthorized);
 
         tokenEntity.IsRevoked = true;
 

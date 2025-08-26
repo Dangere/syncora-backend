@@ -50,7 +50,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<TokensDTO> refreshTokenResult = await _authService.RefreshToken(expiredAccessToken: tokens.AccessToken, refreshToken: tokens.RefreshToken);
 
         if (!refreshTokenResult.IsSuccess)
-            return BadRequest(refreshTokenResult.ErrorMessage);
+            return StatusCode(refreshTokenResult.ErrorStatusCode,refreshTokenResult.ErrorMessage);
 
         return Ok(refreshTokenResult.Data);
         // This will return a new access token and a new refresh token

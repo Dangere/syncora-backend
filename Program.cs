@@ -31,7 +31,7 @@ builder.Services.AddSingleton<NotificationHub>();
 
 // Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("LocalConnection")));
 
 
 
