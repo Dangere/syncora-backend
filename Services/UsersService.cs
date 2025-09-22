@@ -12,9 +12,6 @@ public class UsersService(SyncoraDbContext dbContext, IMapper mapper)
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly IMapper _mapper = mapper;
 
-
-
-
     public async Task<UserEntity?> GetUserEntity(int id)
     {
         return await _dbContext.Users.FindAsync(id);
@@ -48,6 +45,8 @@ public class UsersService(SyncoraDbContext dbContext, IMapper mapper)
         }
         return Result<List<UserDTO>>.Success(usersDTO);
     }
+
+    // Adding functions to update/delete user profile information and make sure to update all groups the user is in 
 
 
 }

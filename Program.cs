@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SyncoraBackend.Data;
@@ -25,9 +26,20 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<ClientSyncService>();
-builder.Services.AddSingleton<SyncHub>();
-builder.Services.AddSingleton<NotificationHub>();
+builder.Services.AddSingleton<InMemoryHubConnectionManager>();
 
+
+// Add Hubs, Lifecycle: Singleton
+// builder.Services.AddSingleton<SyncHub>();
+// builder.Services.AddSingleton<NotificationHub>();
+
+// Adding a delegate to allow services to call the hub to sync, Lifecycle: Transient
+// builder.Services.AddTransient<Func<int, Task>>(provider => delegate (int groupId)
+// {
+//     Console.WriteLine("Sending sync payload");
+//     return provider.GetRequiredService<IHubContext<SyncHub>>().Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync", "payload");
+// });
+// builder.Services.AddTransient<Func<int, Task>>(provider => delegate (int groupId) { return Task.CompletedTask; });
 
 // Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>

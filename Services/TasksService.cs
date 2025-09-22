@@ -7,10 +7,12 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
+public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSyncService clientSyncService)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
+
+    private readonly ClientSyncService _clientSyncService = clientSyncService;
 
     public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId, DateTime? sinceUtc = null)
     {
@@ -59,6 +61,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
+    // TODO: Change it so group members can complete tasks using this method or make a new method designed for that 
     public async Task<Result<string>> UpdateTaskForUser(int taskId, int groupId, int userId, UpdateTaskDTO updatedTaskDTO)
     {
 
@@ -74,14 +77,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
-        if (!isOwner && isShared)
+        if (!isOwner && isShared && !updatedTaskDTO.IsUpdatingCompletionOnly())
         {
             return Result<string>.Error("A shared user can't update the details of tasks in groups they don't own", StatusCodes.Status403Forbidden);
         }
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this task.", StatusCodes.Status403Forbidden);
 
-        return await UpdateTaskEntity(taskEntity, updatedTaskDTO);
+        return await UpdateTaskEntity(taskEntity, updatedTaskDTO, userId);
     }
 
     public async Task<Result<string>> DeleteTaskForUser(int taskId, int groupId, int userId)
@@ -108,6 +111,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
         // TODO: Store deleted tasks to return in the response for syncing with client
         _dbContext.Tasks.Remove(taskEntity);
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(groupId);
 
         return Result<string>.Success("Task deleted.");
     }
@@ -181,6 +185,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(groupId);
 
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
     }
@@ -209,19 +214,31 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext)
         // TODO: Store deleted tasks to return in the response for syncing with client
         _dbContext.Tasks.Remove(taskEntity);
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(taskEntity.GroupId);
 
         return Result<string>.Success("Task deleted.");
     }
 
-    private async Task<Result<string>> UpdateTaskEntity(TaskEntity taskEntity, UpdateTaskDTO updatedTaskDTO)
+    private async Task<Result<string>> UpdateTaskEntity(TaskEntity taskEntity, UpdateTaskDTO updatedTaskDTO, int? userId = null)
     {
         taskEntity.Title = updatedTaskDTO.Title ?? taskEntity.Title;
         taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
 
-        if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
+        if (updatedTaskDTO.Completed != null)
+        {
+            // Im here realizing that this is not the best way to do this
+            // We are basically checking twice if the task is completed as a bool and as a user id when we can only use the user id
+            taskEntity.Completed = updatedTaskDTO.Completed ?? taskEntity.Completed;
+            taskEntity.CompletedById = userId;
+        }
+
+
+
+        if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null || updatedTaskDTO.Completed != null)
             taskEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(taskEntity.GroupId);
 
         return Result<string>.Success("Task updated.");
     }

@@ -1,7 +1,9 @@
 using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Hubs;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Models.DTOs.Tasks;
 using SyncoraBackend.Models.DTOs.Users;
@@ -10,9 +12,12 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class ClientSyncService(SyncoraDbContext dbContext)
+public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, InMemoryHubConnectionManager connectionManager)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
+    private readonly IHubContext<SyncHub> _hubContext = hubContext;
+
+    private readonly InMemoryHubConnectionManager _connectionManager = connectionManager;
 
     // The sync method will return a data batch to the client
     // When its the first time the client is syncing (i.e logging in), it will get all the data using an old 'since' timestamp
@@ -73,5 +78,38 @@ public class ClientSyncService(SyncoraDbContext dbContext)
             payload.Add("deletedTasks", deletedTasks);
         }
         return Result<Dictionary<string, object>>.Success(payload);
+    }
+
+
+    // This should get called whenever a user gets added to a group before the sync is triggered
+    public async Task AddUserToGroup(int userId, int groupId)
+    {
+        IReadOnlyList<string> connections = _connectionManager.GetConnections(userId);
+
+        foreach (string connectionId in connections)
+        {
+            await _hubContext.Groups.AddToGroupAsync(connectionId, $"group-{groupId}");
+
+        }
+
+    }
+
+    // This should get called whenever a user gets removed to a group before the sync is triggered
+    public async Task RemoveUserFromGroup(int userId, int groupId)
+    {
+        IReadOnlyList<string> connections = _connectionManager.GetConnections(userId);
+
+
+        foreach (string connectionId in connections)
+        {
+            await _hubContext.Groups.RemoveFromGroupAsync(connectionId, $"group-{groupId}");
+
+        }
+    }
+
+    public async Task NotifyGroupMembersToSync(int groupId)
+    {
+        Console.WriteLine("Sending sync payload");
+        await _hubContext.Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync");
     }
 }

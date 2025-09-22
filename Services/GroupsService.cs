@@ -9,11 +9,12 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, SyncHub syncHub)
+public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyncService clientSyncService)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
-    private readonly SyncHub _syncHub = syncHub;
+
+    private readonly ClientSyncService _clientSyncService = clientSyncService;
 
     public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
     {
@@ -109,6 +110,8 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, SyncHub s
 
         groupEntity.DeletedDate = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+
 
         // TODO: Store deleted groups to return in the response for syncing with client
         if (groupEntity.Tasks.Count == 0)
@@ -162,7 +165,12 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, SyncHub s
 
         await _dbContext.SaveChangesAsync();
 
-        await _syncHub.SendSyncPayload(groupId, new Dictionary<string, object>());
+        if (allowAccess)
+            await _clientSyncService.AddUserToGroup(userToGrant.Id, groupEntity.Id);
+        else
+            await _clientSyncService.RemoveUserFromGroup(userToGrant.Id, groupEntity.Id);
+
+        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
         return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
     }
 
@@ -176,6 +184,8 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, SyncHub s
         groupEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+
 
         return Result<string>.Success("Group updated.");
     }

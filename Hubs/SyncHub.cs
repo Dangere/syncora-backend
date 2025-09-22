@@ -7,19 +7,16 @@ using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
 [AuthorizeRoles(UserRole.User, UserRole.Admin)]
-public class SyncHub(GroupsService groupService) : Hub
+public class SyncHub(GroupsService groupService, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
 {
     private readonly GroupsService _groupService = groupService;
 
-    public async Task SendSyncPayload(int groupId, Dictionary<string, object> payload)
-    {
-        await Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync", payload);
-    }
 
     public override async Task OnConnectedAsync()
     {
         int UserId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         Console.WriteLine($"A client has connected, UserId: {UserId}");
+        inMemoryConnectionManager.AddConnection(UserId, Context.ConnectionId);
 
         List<GroupDTO> groups = await _groupService.GetGroups(UserId);
 
@@ -27,6 +24,7 @@ public class SyncHub(GroupsService groupService) : Hub
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
         }
+        Console.WriteLine("generated connection id is " + Context.ConnectionId);
 
         await base.OnConnectedAsync();
     }
