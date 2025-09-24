@@ -150,10 +150,6 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
             return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
 
 
-
-
-
-
         if (allowAccess)
             groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupId, UserId = userToGrant.Id, RoleInGroup = "Member" });
         else
@@ -166,11 +162,16 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         await _dbContext.SaveChangesAsync();
 
         if (allowAccess)
-            await _clientSyncService.AddUserToGroup(userToGrant.Id, groupEntity.Id);
+        {
+            await _clientSyncService.AddUserToHubGroup(userToGrant.Id, groupEntity.Id);
+            await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+        }
         else
-            await _clientSyncService.RemoveUserFromGroup(userToGrant.Id, groupEntity.Id);
+        {
+            await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+            await _clientSyncService.RemoveUserFromHubGroup(userToGrant.Id, groupEntity.Id);
+        }
 
-        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
         return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
     }
 

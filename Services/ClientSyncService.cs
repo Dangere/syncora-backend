@@ -31,8 +31,12 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     // TODO: Add deleted groups in record when a user deletes their account
     // TODO: Add deleted tasks in record when a group is deleted
     // TODO: Update groups when a user deletes their account
-    // TODO: Make all clients call the sync endpoint whenever someone modifies data
+    // TODO: Make all clients call the sync endpoint whenever someone modifies data  (Done)
     // Remember: The client will also delete all tasks associated with a group on group deletion cascading, the same goes for groups when owner deletes their account
+
+    // BUG: When a user is added to a group and they are given a sync payload for the first time, the user gets their own user data because their JoinedAt is later than the last sync
+    // BUG:  When a user is added to a group and they are given a sync payload for the first time, they don't get the already added users in the group
+    // BUG: When a shared user tried to get a payload, they get the data for all the member in group, EXCEPT the owner's user data
     public async Task<Result<Dictionary<string, object>>> SyncSinceTimestamp(int userId, DateTime since, bool includeDeleted = false)
     {
         DateTime utcSince = since.Kind == DateTimeKind.Utc ? since : since.ToUniversalTime();
@@ -49,12 +53,14 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
                              .Select(m => new UserDTO(m.User.Id, m.User.Email, m.User.Username, m.User.Role.ToString(), m.User.CreationDate, m.User.LastModifiedDate, m.User.ProfilePictureURL)),
                 Tasks = g.Tasks
                              .Where(t => t.LastModifiedDate > utcSince)
-                             .Select(t => new TaskDTO(t.Id, t.Title, t.Description, t.Completed, t.CompletedById, t.CreationDate, t.LastModifiedDate, t.GroupId))
+                             .Select(t => new TaskDTO(t.Id, t.Title, t.Description, t.Completed, t.CompletedById, t.CreationDate, t.LastModifiedDate, t.GroupId)),
+
+                Owner = (g.OwnerUser.LastModifiedDate > utcSince) ? new UserDTO(g.OwnerUser.Id, g.OwnerUser.Email, g.OwnerUser.Username, g.OwnerUser.Role.ToString(), g.OwnerUser.CreationDate, g.OwnerUser.LastModifiedDate, g.OwnerUser.ProfilePictureURL) : null
             })
             .ToListAsync();
 
         List<GroupDTO> groupDTOs = raw.Select(x => x.Group).Where(x => x.LastModifiedDate > utcSince).ToList();
-        HashSet<UserDTO> userDTOs = raw.SelectMany(x => x.Users).ToHashSet();
+        HashSet<UserDTO> userDTOs = raw.SelectMany(x => x.Users).Union(raw.Select(x => x.Owner).Where(x => x != null).Cast<UserDTO>()).ToHashSet();
         List<TaskDTO> taskDTOs = raw.SelectMany(x => x.Tasks).ToList();
 
 
@@ -82,7 +88,7 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
 
 
     // This should get called whenever a user gets added to a group before the sync is triggered
-    public async Task AddUserToGroup(int userId, int groupId)
+    public async Task AddUserToHubGroup(int userId, int groupId)
     {
         IReadOnlyList<string> connections = _connectionManager.GetConnections(userId);
 
@@ -95,7 +101,7 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     }
 
     // This should get called whenever a user gets removed to a group before the sync is triggered
-    public async Task RemoveUserFromGroup(int userId, int groupId)
+    public async Task RemoveUserFromHubGroup(int userId, int groupId)
     {
         IReadOnlyList<string> connections = _connectionManager.GetConnections(userId);
 
