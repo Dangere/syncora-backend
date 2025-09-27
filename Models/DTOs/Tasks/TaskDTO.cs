@@ -5,8 +5,8 @@ public record class TaskDTO(
     int Id,
     string Title,
     string? Description,
-    bool Completed,
     int? CompletedById,
+    int[] AssignedTo,
     DateTime CreationDate,
     DateTime? LastModifiedDate,
     int GroupId

@@ -146,16 +146,30 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         if (groupEntity.OwnerUserId == userToGrant.Id)
             return Result<string>.Error("You can't grant or revoke access to yourself as the group owner.", 400);
 
-        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId))
+        if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId && m.KickedAt == null))
             return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
 
 
         if (allowAccess)
-            groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupId, UserId = userToGrant.Id, RoleInGroup = "Member" });
+        {
+            GroupMemberEntity? groupMember = groupEntity.GroupMembers.FirstOrDefault(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
+
+            if (groupMember == null)
+            {
+                groupEntity.GroupMembers.Add(new GroupMemberEntity() { GroupId = groupId, UserId = userToGrant.Id, RoleInGroup = "Member" });
+            }
+            else
+            {
+                groupMember.KickedAt = null;
+                groupMember.JoinedAt = DateTime.UtcNow;
+            }
+
+        }
         else
         {
+            GroupMemberEntity groupMember = groupEntity.GroupMembers.First(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
+            groupMember.KickedAt = DateTime.UtcNow;
 
-            groupEntity.GroupMembers.RemoveWhere(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
         }
         groupEntity.LastModifiedDate = DateTime.UtcNow;
 

@@ -26,13 +26,18 @@ public class UserEntity
 
     // Using HashSet to avoid duplicate TaskEntity instances in memory.
     // One-to-Many: A user can own multiple groups, while groups can be owned by only one user
-    public HashSet<GroupEntity> OwnedGroups { get; set; } = [];
+    public HashSet<GroupEntity> OwnedGroups { get; } = [];
 
     // // Many-to-Many: A user can access multiple groups, while groups can be accessed by multiple users
     // public HashSet<GroupEntity> AccessibleGroups { get; set; } = [];
-    public HashSet<GroupMemberEntity> GroupMemberships { get; set; } = [];
+    public HashSet<GroupMemberEntity> GroupMemberships { get; } = [];
 
-    public HashSet<RefreshTokenEntity> RefreshTokens { get; set; } = [];
+    // Tasks assigned to the user by other users
+    public HashSet<TaskEntity> AssignedTasks { get; } = [];
+
+    // Tasks assigned to the user by other users
+    public HashSet<TaskEntity> CompletedTasks { get; } = [];
+    public HashSet<RefreshTokenEntity> RefreshTokens { get; } = [];
 
     public required DateTime LastModifiedDate { get; set; }
 

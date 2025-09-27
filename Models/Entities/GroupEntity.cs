@@ -12,7 +12,7 @@ public class GroupEntity
     [Required]
     public required string Title { get; set; }
     public string? Description { get; set; }
-
+    [Required]
     public required DateTime CreationDate { get; set; }
 
     [Required]
@@ -21,8 +21,6 @@ public class GroupEntity
 
     // public HashSet<UserEntity> Members { get; } = [];
     public HashSet<GroupMemberEntity> GroupMembers { get; } = [];
-
-
 
     public HashSet<TaskEntity> Tasks { get; } = [];
 
@@ -40,4 +38,25 @@ public class GroupEntity
     {
         return Id.GetHashCode();
     }
+
+    // This method assumes users are loaded into memory.
+    public GroupAccess GetGroupAccess(int userId)
+    {
+        bool isOwner = OwnerUserId == userId;
+        bool isShared = GroupMembers.Any(m => m.UserId == userId);
+        if (!isOwner && isShared)
+        {
+            return GroupAccess.Shared;
+        }
+        else if (!isOwner && !isShared)
+            return GroupAccess.Denied;
+        return GroupAccess.Owner;
+    }
+
+}
+public enum GroupAccess
+{
+    Owner,
+    Shared,
+    Denied
 }

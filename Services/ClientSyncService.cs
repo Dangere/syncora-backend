@@ -44,18 +44,20 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
         // Getting all groups (regardless of the modification date which gets filtered later) then tasks and users since the last sync
         var raw = await _dbContext.Groups
             .AsNoTracking()
-            .Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)) && g.DeletedDate == null)
+            // We select the groups that are either owned by the user or shared with the user and that are not deleted or kicked from
+            .Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null)) && g.DeletedDate == null)
             .Select(g => new
             {
                 Group = new GroupDTO(g.Id, g.Title, g.Description, g.CreationDate, g.LastModifiedDate, g.OwnerUserId, g.GroupMembers.Select(m => m.User.Id).ToArray()),
                 Users = g.GroupMembers
-                             .Where(m => m.JoinedAt > utcSince || m.User.LastModifiedDate > utcSince)
+                             // We select the users that newly joined or were newly modified or all of them if the group was modified
+                             .Where(m => m.JoinedAt > utcSince || m.User.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince)
                              .Select(m => new UserDTO(m.User.Id, m.User.Email, m.User.Username, m.User.Role.ToString(), m.User.CreationDate, m.User.LastModifiedDate, m.User.ProfilePictureURL)),
                 Tasks = g.Tasks
                              .Where(t => t.LastModifiedDate > utcSince)
-                             .Select(t => new TaskDTO(t.Id, t.Title, t.Description, t.Completed, t.CompletedById, t.CreationDate, t.LastModifiedDate, t.GroupId)),
+                             .Select(t => new TaskDTO(t.Id, t.Title, t.Description, t.CompletedById, t.AssignedTo.Select(m => m.Id).ToArray(), t.CreationDate, t.LastModifiedDate, t.GroupId)),//_mapper.Map<TaskDTO>(t, t.CreationDate, t.LastModifiedDate, t.GroupId)),
 
-                Owner = (g.OwnerUser.LastModifiedDate > utcSince) ? new UserDTO(g.OwnerUser.Id, g.OwnerUser.Email, g.OwnerUser.Username, g.OwnerUser.Role.ToString(), g.OwnerUser.CreationDate, g.OwnerUser.LastModifiedDate, g.OwnerUser.ProfilePictureURL) : null
+                Owner = (g.OwnerUser.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) ? new UserDTO(g.OwnerUser.Id, g.OwnerUser.Email, g.OwnerUser.Username, g.OwnerUser.Role.ToString(), g.OwnerUser.CreationDate, g.OwnerUser.LastModifiedDate, g.OwnerUser.ProfilePictureURL) : null
             })
             .ToListAsync();
 
@@ -77,11 +79,12 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
         // This actually increases the fetch time by a lot, optimize it
         if (includeDeleted)
         {
-            List<int> deletedGroups = _dbContext.Groups.AsNoTracking().Where(g => g.DeletedDate != null && g.DeletedDate > utcSince).Select(g => g.Id).ToList();
-            List<int> deletedTasks = _dbContext.DeletedRecords.AsNoTracking().Where(dr => groupDTOs.Select(g => g.Id).Contains(dr.EntityId) && dr.TableName == "tasks" && dr.DeletedAt > utcSince).Select(dr => dr.EntityId).ToList();
+            List<int> kickedGroups = _dbContext.Groups.AsNoTracking().Where(g => g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt > utcSince)).Select(g => g.Id).ToList(); // TODO: Add this != null && g.DeletedDate > utcSince).Select(g => g.Id).ToList();
+            // List<int> deletedGroups = _dbContext.Groups.AsNoTracking().Where(g => g.DeletedDate != null && g.DeletedDate > utcSince).Select(g => g.Id).ToList();
+            // List<int> deletedTasks = _dbContext.DeletedRecords.AsNoTracking().Where(dr => groupDTOs.Select(g => g.Id).Contains(dr.EntityId) && dr.TableName == "tasks" && dr.DeletedAt > utcSince).Select(dr => dr.EntityId).ToList();
 
-            payload.Add("deletedGroups", deletedGroups);
-            payload.Add("deletedTasks", deletedTasks);
+            payload.Add("kickedGroupsIds", kickedGroups);
+            // payload.Add("deletedTasks", deletedTasks);
         }
         return Result<Dictionary<string, object>>.Success(payload);
     }

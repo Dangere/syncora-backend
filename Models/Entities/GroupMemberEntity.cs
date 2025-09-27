@@ -14,6 +14,8 @@ public class GroupMemberEntity
 
     // Any extra fields you might want:
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? KickedAt { get; set; } = null;
+
     public required string RoleInGroup { get; set; }
 
     // Navigation
