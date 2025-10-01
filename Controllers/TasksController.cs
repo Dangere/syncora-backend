@@ -59,7 +59,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     }
 
     [HttpPut("{taskId}")]
-    public async Task<IActionResult> UpdateTask([FromBody] UpdateTaskDTO updatedTaskDTO, int taskId, int groupId)
+    public async Task<IActionResult> UpdateTask([FromBody] UpdateTaskDetailsDTO updatedTaskDTO, int taskId, int groupId)
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -86,19 +86,33 @@ public class TasksController(TasksService taskService) : ControllerBase
         return NoContent();
     }
 
-    // [HttpPut("{taskId}/mark")]
-    // // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/mark?isDone=true
-    // public async Task<IActionResult> MarkTask(int taskId, int groupId, [FromQuery] bool isDone = true)
-    // {
-    //     int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    //     // Result<string> updateResult = await _taskService.UpdateTaskForUser(taskId, groupId, userId, updatedTaskDTO);
+    [HttpPut("{taskId}/set-assign")]
+    // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/set-assign?ids=1&ids=2&ids=3
+    public async Task<IActionResult> SetAssignTask([FromQuery] int[] ids, int taskId, int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    //     // if (!updateResult.IsSuccess)
-    //     //     return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+        Result<string> assignResults = await _taskService.SetAssignTaskToUsers(taskId, groupId, userId, ids);
 
-    //     // return NoContent();
-    // }
+        if (!assignResults.IsSuccess)
+            return StatusCode(assignResults.ErrorStatusCode, assignResults.ErrorMessage);
+
+        return NoContent();
+    }
+    [HttpPut("{taskId}/mark")]
+    // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/mark?isDone=true
+    public async Task<IActionResult> MarkTask(int taskId, int groupId, [FromQuery] bool isDone = true)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> updateResult = await _taskService.MarkTaskForUser(taskId, groupId, userId, isDone);
+
+        if (!updateResult.IsSuccess)
+            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+
+        return NoContent();
+    }
 
     [HttpDelete("{taskId}")]
     public async Task<IActionResult> DeleteTask(int taskId, int groupId)

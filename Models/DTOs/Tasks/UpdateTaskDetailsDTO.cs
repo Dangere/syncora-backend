@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SyncoraBackend.Models.DTOs.Tasks;
 
-public record class UpdateTaskDTO(string? Title, string? Description) : IValidatableObject
+public record class UpdateTaskDetailsDTO(string? Title, string? Description) : IValidatableObject
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
