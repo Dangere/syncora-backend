@@ -170,6 +170,18 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
             GroupMemberEntity groupMember = groupEntity.GroupMembers.First(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
             groupMember.KickedAt = DateTime.UtcNow;
 
+
+            var assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userToGrant)).ToListAsync();
+
+            foreach (TaskEntity task in assignedTasks)
+            {
+                task.AssignedTo.Remove(userToGrant);
+                if (task.CompletedById == userToGrant.Id)
+                    task.CompletedById = null;
+
+                task.LastModifiedDate = DateTime.UtcNow;
+            }
+
         }
         groupEntity.LastModifiedDate = DateTime.UtcNow;
 

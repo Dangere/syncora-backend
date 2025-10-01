@@ -48,10 +48,10 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
             .Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null)) && g.DeletedDate == null)
             .Select(g => new
             {
-                Group = new GroupDTO(g.Id, g.Title, g.Description, g.CreationDate, g.LastModifiedDate, g.OwnerUserId, g.GroupMembers.Select(m => m.User.Id).ToArray()),
+                Group = new GroupDTO(g.Id, g.Title, g.Description, g.CreationDate, g.LastModifiedDate, g.OwnerUserId, g.GroupMembers.Where(m => m.KickedAt == null).Select(m => m.User.Id).ToArray()),
                 Users = g.GroupMembers
                              // We select the users that newly joined or were newly modified or all of them if the group was modified
-                             .Where(m => m.JoinedAt > utcSince || m.User.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince)
+                             .Where(m => (m.JoinedAt > utcSince || m.User.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) && m.KickedAt == null)
                              .Select(m => new UserDTO(m.User.Id, m.User.Email, m.User.Username, m.User.Role.ToString(), m.User.CreationDate, m.User.LastModifiedDate, m.User.ProfilePictureURL)),
                 Tasks = g.Tasks
                              .Where(t => t.LastModifiedDate > utcSince)

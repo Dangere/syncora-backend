@@ -22,7 +22,7 @@ public class TokenService(IConfiguration configuration)
     public string GenerateAccessToken(UserEntity user)
     {
         var jwtConfig = _config.GetSection("Jwt");
-        DateTime expiration = DateTime.UtcNow.AddSeconds(int.Parse(jwtConfig["TokenExpiryMinutes"]!));
+        DateTime expiration = DateTime.UtcNow.AddMinutes(int.Parse(jwtConfig["TokenExpiryMinutes"]!));
 
         // Create claims. Notice how we include a role claim based on the user's properties.
         // JwtRegisteredClaimNames are standardized JWT claims per the JWT spec
