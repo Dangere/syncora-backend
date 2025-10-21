@@ -78,13 +78,22 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string hash = Hashing.HashPassword(password, salt);
 
 
-        UserEntity user = new() { Email = email, Hash = hash, Salt = Convert.ToBase64String(salt), CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, Role = UserRole.User, Username = userName };
+        UserEntity user = new()
+        {
+            Email = email,
+            Hash = hash,
+            Salt = Convert.ToBase64String(salt),
+            CreationDate = DateTime.UtcNow,
+            LastModifiedDate = DateTime.UtcNow,
+            Role = UserRole.User,
+            Username = userName
+        };
 
         // Save user
         await _dbContext.Users.AddAsync(user);
         await _dbContext.SaveChangesAsync();
 
-        // Generate refresh token, we assume ef core generates the id for the user after adding it
+        // Generate refresh token, ef core generates the id for the user after adding it
         RefreshTokenEntity refreshToken = _tokenService.GenerateRefreshToken(user.Id);
         await _dbContext.RefreshTokens.AddAsync(refreshToken);
         await _dbContext.SaveChangesAsync();

@@ -216,4 +216,51 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
         return Result<string>.Success("Group updated.");
     }
+
+    public async Task<Result<string>> LeaveGroup(int groupId, int userId)
+    {
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+
+        if (groupEntity == null)
+            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
+
+        bool isOwner = groupEntity.OwnerUserId == userId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
+
+        if (isOwner)
+            return Result<string>.Error("Owners can't leave the group.", StatusCodes.Status403Forbidden);
+        else if (!isOwner && !isShared)
+            return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
+
+
+        // Getting the user leaving
+        UserEntity userLeaving = await _dbContext.Users.FirstAsync(u => u.Id == userId);
+
+        // Removing the user from the group
+        groupEntity.GroupMembers.RemoveWhere(m => m.UserId == userId && m.GroupId == groupId);
+
+
+        // Marking the group as modified so it is queued to sync
+        groupEntity.LastModifiedDate = DateTime.UtcNow;
+
+        // Getting the assigned tasks for that user
+        var assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userLeaving)).ToListAsync();
+
+        // Removing the user from the assigned tasks
+        foreach (TaskEntity task in assignedTasks)
+        {
+            task.AssignedTo.Remove(userLeaving);
+            if (task.CompletedById == userLeaving.Id)
+                task.CompletedById = null;
+
+            task.LastModifiedDate = DateTime.UtcNow;
+        }
+
+        // Saving the changes
+        await _dbContext.SaveChangesAsync();
+        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+
+        return Result<string>.Success("User left group.");
+
+    }
 }

@@ -82,9 +82,9 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost("{groupId}/grant-access/{userName}")]
     public async Task<IActionResult> GrantAccessToGroup(int groupId, string userName)
     {
-        int currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        int requestUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> grantResult = await _groupService.AllowAccessToGroup(groupId, currentUserId, userName, true);
+        Result<string> grantResult = await _groupService.AllowAccessToGroup(groupId, requestUserId, userName, true);
 
         if (!grantResult.IsSuccess)
             return StatusCode(grantResult.ErrorStatusCode, grantResult.ErrorMessage);
@@ -95,9 +95,24 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost("{groupId}/revoke-access/{userName}")]
     public async Task<IActionResult> RevokeAccessToGroup(int groupId, string userName)
     {
-        int currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        int requestUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> revokeResult = await _groupService.AllowAccessToGroup(groupId, currentUserId, userName, false);
+        Result<string> revokeResult = await _groupService.AllowAccessToGroup(groupId, requestUserId, userName, false);
+
+        if (!revokeResult.IsSuccess)
+            return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
+
+        return NoContent();
+    }
+
+
+
+    [HttpPost("{groupId}/leave")]
+    public async Task<IActionResult> LeaveGroup(int groupId)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<string> revokeResult = await _groupService.LeaveGroup(groupId, userId);
 
         if (!revokeResult.IsSuccess)
             return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
