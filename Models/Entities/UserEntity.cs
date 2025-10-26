@@ -20,7 +20,8 @@ public class UserEntity
     public required UserRole Role { get; set; } = UserRole.User;
 
     [Required]
-    public required DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
 
     public string? ProfilePictureURL { get; set; } = null;
 
@@ -39,7 +40,14 @@ public class UserEntity
     public HashSet<TaskEntity> CompletedTasks { get; } = [];
     public HashSet<RefreshTokenEntity> RefreshTokens { get; } = [];
 
-    public required DateTime LastModifiedDate { get; set; }
+    /// <summary>
+    ///     Creates a new UserEntity instance with the given parameters,
+    ///     Both email and username are converted to lowercase
+    /// </summary>
+    public static UserEntity CreateUser(string email, string username, string hash, byte[] salt, UserRole role)
+        => new() { Email = email.ToLower(), Username = username.ToLower(), Hash = hash, Salt = Convert.ToBase64String(salt), Role = role };
+
+
 
     public override bool Equals(object? obj)
     {

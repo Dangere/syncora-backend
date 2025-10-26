@@ -25,7 +25,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithEmailAndPassword(loginRequest.Email, loginRequest.Password);
 
         if (!loginResult.IsSuccess)
-            return BadRequest(loginResult.ErrorMessage);
+            return StatusCode(loginResult.ErrorStatusCode, loginResult.ErrorMessage);
+
 
         return Ok(loginResult.Data);
 
@@ -37,7 +38,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.Username);
 
         if (!registerResult.IsSuccess)
-            return BadRequest(registerResult.ErrorMessage);
+            return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
+
 
         return Ok(registerResult.Data);
 
@@ -50,7 +52,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<TokensDTO> refreshTokenResult = await _authService.RefreshToken(expiredAccessToken: tokens.AccessToken, refreshToken: tokens.RefreshToken);
 
         if (!refreshTokenResult.IsSuccess)
-            return StatusCode(refreshTokenResult.ErrorStatusCode,refreshTokenResult.ErrorMessage);
+            return StatusCode(refreshTokenResult.ErrorStatusCode, refreshTokenResult.ErrorMessage);
 
         return Ok(refreshTokenResult.Data);
         // This will return a new access token and a new refresh token
@@ -58,4 +60,25 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
     }
 
+
+    [HttpPost("login/google/{idToken}")]
+    public async Task<IActionResult> LoginWithGoogle(string idToken)
+    {
+        Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithGoogle(idToken);
+
+        if (!loginResult.IsSuccess)
+            return StatusCode(loginResult.ErrorStatusCode, loginResult.ErrorMessage);
+
+        return Ok(loginResult.Data);
+    }
+    [HttpPost("register/google")]
+    public async Task<IActionResult> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest)
+    {
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithGoogle(registerWithGoogleRequest.IdToken, registerWithGoogleRequest.Username, registerWithGoogleRequest.Password);
+
+        if (!registerResult.IsSuccess)
+            return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
+
+        return Ok(registerResult.Data);
+    }
 }
