@@ -27,6 +27,7 @@ public class TaskEntity
     public GroupEntity Group { get; set; } = null!;
     [Required]
     public required DateTime LastModifiedDate { get; set; }
+    public DateTime? DeletedAt { get; set; } = null;
     public HashSet<UserEntity> AssignedTo { get; set; } = [];
 
     public override bool Equals(object? obj)

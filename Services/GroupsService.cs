@@ -18,7 +18,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
     public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<GroupDTO>.Error("Group does not exist.", StatusCodes.Status404NotFound);
@@ -37,11 +37,11 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         List<GroupDTO> groups;
         if (sinceUtc != null)
         {
-            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)) && g.LastModifiedDate > sinceUtc && g.DeletedDate == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
+            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)) && g.LastModifiedDate > sinceUtc && g.DeletedAt == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
         }
         else
         {
-            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)) && g.DeletedDate == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
+            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)) && g.DeletedAt == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
 
         }
 
@@ -69,7 +69,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         // Make sure the group exists
         if (groupEntity == null)
@@ -93,7 +93,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         if (await _dbContext.Users.FindAsync(userId) == null)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         // Make sure the group exists
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
@@ -108,12 +108,11 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
 
-        groupEntity.DeletedDate = DateTime.UtcNow;
+        groupEntity.DeletedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
         await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
 
 
-        // TODO: Store deleted groups to return in the response for syncing with client
         if (groupEntity.Tasks.Count == 0)
             return Result<string>.Success("Group deleted.");
         else
@@ -122,7 +121,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
     public async Task<Result<string>> AllowAccessToGroup(int groupId, int userId, string userNameToGrant, bool allowAccess)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
@@ -219,7 +218,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
     public async Task<Result<string>> LeaveGroup(int groupId, int userId)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);

@@ -19,7 +19,7 @@ public class UsersService(SyncoraDbContext dbContext, IMapper mapper)
 
     public async Task<Result<List<UserDTO>>> GetUsersInGroup(int userId, int groupId, DateTime? sinceUtc = null)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedDate == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<List<UserDTO>>.Error("Group does not exist.", StatusCodes.Status404NotFound);

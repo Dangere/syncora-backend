@@ -27,7 +27,7 @@ public class GroupEntity
     [Required]
     public required DateTime LastModifiedDate { get; set; }
 
-    public DateTime? DeletedDate { get; set; }
+    public DateTime? DeletedAt { get; set; } = null;
 
     public override bool Equals(object? obj)
     {
