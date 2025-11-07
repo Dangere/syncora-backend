@@ -78,9 +78,10 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
 
         if (includeDeleted)
         {
-            List<int> kickedGroups = _dbContext.Groups.AsNoTracking().Where(g => g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt > utcSince)).Select(g => g.Id).ToList();
-            List<int> deletedGroups = _dbContext.Groups.AsNoTracking().Where(g => g.DeletedAt > utcSince).Select(g => g.Id).ToList();
-            List<int> deletedTasks = _dbContext.Tasks.AsNoTracking().Where(t => t.DeletedAt > utcSince && groupDTOs.Select(g => g.Id).Contains(t.GroupId)).Select(t => t.Id).ToList();
+            List<int> kickedGroups = await _dbContext.Groups.AsNoTracking().Where(g => g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt > utcSince)).Select(g => g.Id).ToListAsync();
+            List<int> deletedGroups = await _dbContext.Groups.AsNoTracking().Where(g => g.DeletedAt > utcSince).Select(g => g.Id).ToListAsync();
+            List<int> deletedTasks = await _dbContext.Tasks.AsNoTracking().Where(t => t.DeletedAt > utcSince && (t.Group.GroupMembers.Any(m => m.UserId == userId) || t.Group.OwnerUserId == userId)).Select(t => t.Id).ToListAsync();
+
             payload.Add("kickedGroupsIds", kickedGroups);
             payload.Add("deletedTasks", deletedTasks);
             payload.Add("deletedGroups", deletedGroups);

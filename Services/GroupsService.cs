@@ -58,6 +58,8 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
         await _dbContext.Groups.AddAsync(createdGroup);
         await _dbContext.SaveChangesAsync();
+        await _clientSyncService.AddUserToHubGroup(userId, createdGroup.Id);
+
 
         return Result<GroupDTO>.Success(_mapper.Map<GroupDTO>(createdGroup));
     }
