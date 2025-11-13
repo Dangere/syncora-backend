@@ -107,8 +107,8 @@ builder.Services.AddRateLimiter(options =>
         {
             return new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 100, // Max 100 requests
-                Window = TimeSpan.FromMinutes(1), // Per 1 minute window
+                PermitLimit = 6, // Max 100 requests
+                Window = TimeSpan.FromSeconds(10), // Per 1 minute window
                 QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
             };
         });
@@ -131,6 +131,19 @@ builder.Services.AddRateLimiter(options =>
     });
 
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString();
+        }
+
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken);
+
+        Console.WriteLine($"Rate limit exceeded for IP: {context.HttpContext.Connection.RemoteIpAddress}");
+    };
 });
 builder.Services.AddAuthorization();
 
