@@ -6,6 +6,7 @@ using System.Text;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using SyncoraBackend.Models.Entities;
+using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
@@ -50,7 +51,7 @@ public class TokenService(IConfiguration configuration)
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public ClaimsPrincipal ExtractPrincipalFromExpiredToken(string jwtToken)
+    public ClaimsPrincipal ExtractPrincipalFromToken(string jwtToken, bool validateLifetime = true)
     {
         var jwtConfig = _config.GetSection("Jwt");
 
@@ -60,7 +61,7 @@ public class TokenService(IConfiguration configuration)
         SymmetricSecurityKey key = new(Encoding.UTF8.GetBytes(jwtConfig["SecretKey"]!));
 
 
-        validationParameters.ValidateLifetime = false;
+        validationParameters.ValidateLifetime = validateLifetime;
 
         validationParameters.ValidAudience = jwtConfig["Audience"];
         validationParameters.ValidIssuer = jwtConfig["Issuer"];
@@ -72,12 +73,18 @@ public class TokenService(IConfiguration configuration)
         return principal;
     }
 
-    public RefreshTokenEntity GenerateRefreshToken(int userId)
-    {
-        string tokenString = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        int expiryDays = int.Parse(_config.GetSection("RefreshToken")["TokenExpiryDays"]!);
 
-        RefreshTokenEntity refreshTokenEntity = new() { RefreshToken = tokenString, UserId = userId, ExpiresAt = DateTime.UtcNow.AddDays(expiryDays), IsRevoked = false };
+    public RefreshTokenEntity GenerateRefreshToken(int userId, string salt, out string refreshToken)
+    {
+        string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        string refreshTokenHash = Hashing.HashString(generatedToken, salt);
+        int expiryDays = int.Parse(_config.GetSection("RefreshToken")["TokenExpiryDays"]!);
+        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.CreateToken(userId, refreshTokenHash, expiryDays, false);
+
+        refreshToken = generatedToken;
+
         return refreshTokenEntity;
+
     }
+
 }

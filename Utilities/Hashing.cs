@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 namespace SyncoraBackend.Utilities;
+
 public static class Hashing
 {
 
-    public static byte[] GenerateSalt()
+    public static string GenerateSalt()
     {
         byte[] salt = new byte[16];
         using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
@@ -11,12 +12,13 @@ public static class Hashing
             rng.GetBytes(salt);
 
         }
-        return salt;
+        return Convert.ToBase64String(salt);
     }
 
-    public static string HashPassword(string password, byte[] salt)
+    public static string HashString(string password, string salt)
     {
-        using var Pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000, HashAlgorithmName.SHA256);
+        byte[] saltBytes = Convert.FromBase64String(salt);
+        using var Pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000, HashAlgorithmName.SHA256);
 
         byte[] hashBytes = Pbkdf2.GetBytes(32);
 

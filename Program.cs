@@ -26,6 +26,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<ClientSyncService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.AddSingleton<InMemoryHubConnectionManager>();
 
 
@@ -107,8 +108,8 @@ builder.Services.AddRateLimiter(options =>
         {
             return new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 6, // Max 100 requests
-                Window = TimeSpan.FromSeconds(10), // Per 1 minute window
+                PermitLimit = 100, // Max 100 requests
+                Window = TimeSpan.FromMinutes(1), // Per 1 minute window
                 QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
             };
         });

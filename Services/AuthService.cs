@@ -10,16 +10,17 @@ using Microsoft.AspNetCore.Routing.Template;
 using System.Security.Claims;
 using Google.Apis.Auth;
 using SyncoraBackend.Migrations;
+using System.Security.Cryptography;
 
 
 namespace SyncoraBackend.Services;
 
-public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, IConfiguration configuration)
+public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly TokenService _tokenService = tokenService;
-
+    private readonly EmailService _emailService = emailService;
     private readonly IConfiguration _config = configuration;
 
     // You should NOT create an access token from a username/password request.
@@ -35,21 +36,20 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         if (user == null)
             return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
 
-        byte[] salt = Convert.FromBase64String(user.Salt);
-        string hash = Hashing.HashPassword(password, salt);
+        string hash = Hashing.HashString(password, user.Salt);
 
         if (!string.Equals(hash, user.Hash))
             return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
 
         // Generate refresh token
-        RefreshTokenEntity refreshToken = _tokenService.GenerateRefreshToken(user.Id);
-        await _dbContext.RefreshTokens.AddAsync(refreshToken);
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(user.Id, user.Salt, out string refreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
 
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken.RefreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -79,26 +79,32 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
 
         // Generate salt and hash
-        byte[] salt = Hashing.GenerateSalt();
-        string hash = Hashing.HashPassword(password, salt);
+        string salt = Hashing.GenerateSalt();
+        string passwordHash = Hashing.HashString(password, salt);
 
-
-        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: hash, salt: salt, role: UserRole.User);
+        // Create user without verified email
+        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false);
 
 
         // Save user
         await _dbContext.Users.AddAsync(user);
         await _dbContext.SaveChangesAsync();
 
-        // Generate refresh token, ef core generates the id for the user after adding it
-        RefreshTokenEntity refreshToken = _tokenService.GenerateRefreshToken(user.Id);
-        await _dbContext.RefreshTokens.AddAsync(refreshToken);
+        // Generate refresh token, and store it hashed
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(user.Id, salt, out string refreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
+
+        // Send verification email
+        Result<string> emailResult = await _emailService.SendVerificationEmail(username, email);
+
+        // if (!emailResult.IsSuccess)
+        //     return Result<AuthenticationResponseDTO>.Error("Failed to send verification email.");
 
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken.RefreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
     public async Task<Result<TokensDTO>> RefreshToken(string expiredAccessToken, string refreshToken)
@@ -106,7 +112,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         ClaimsPrincipal claimsFromExpiredToken;
         try
         {
-            claimsFromExpiredToken = _tokenService.ExtractPrincipalFromExpiredToken(expiredAccessToken);
+            claimsFromExpiredToken = _tokenService.ExtractPrincipalFromToken(expiredAccessToken, false);
         }
         catch (Exception e)
         {
@@ -114,17 +120,24 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
 
         int userId = int.Parse(claimsFromExpiredToken.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        string? salt = await _dbContext.Users.Where(u => u.Id == userId).Select(u => u.Salt).FirstOrDefaultAsync();
 
-        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.RefreshToken == refreshToken && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+        if (salt == null)
+            return Result<TokensDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        // Check if refresh token is valid
+        string refreshTokenHash = Hashing.HashString(refreshToken, salt);
+
+        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.HashedToken == refreshTokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
         if (tokenEntity == null)
             return Result<TokensDTO>.Error("Invalid refresh token.", StatusCodes.Status401Unauthorized);
 
         tokenEntity.IsRevoked = true;
 
-        // Generate refresh token
-        RefreshTokenEntity newRefreshToken = _tokenService.GenerateRefreshToken(userId);
-        await _dbContext.RefreshTokens.AddAsync(newRefreshToken);
+        // Generate refresh token, and store it hashed
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(userId, salt, out string newRefreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
 
 
@@ -132,7 +145,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         UserEntity user = await _dbContext.Users.FirstAsync(u => u.Id == userId);
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        return Result<TokensDTO>.Success(new TokensDTO(accessToken, newRefreshToken.RefreshToken));
+        return Result<TokensDTO>.Success(new TokensDTO(accessToken, newRefreshToken));
 
 
     }
@@ -166,14 +179,14 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<AuthenticationResponseDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
         // Generate refresh token
-        RefreshTokenEntity refreshToken = _tokenService.GenerateRefreshToken(user.Id);
-        await _dbContext.RefreshTokens.AddAsync(refreshToken);
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(user.Id, user.Salt, out string refreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
 
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken.RefreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -212,24 +225,60 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
 
         // Generate salt and hash
-        byte[] salt = Hashing.GenerateSalt();
-        string hash = Hashing.HashPassword(password, salt);
+        string salt = Hashing.GenerateSalt();
+        string hash = Hashing.HashString(password, salt);
 
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User);
+        // Create user with verified email
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true);
 
         // Save user
         await _dbContext.Users.AddAsync(user);
         await _dbContext.SaveChangesAsync();
 
         // Generate refresh token, ef core generates the id for the user after adding it
-        RefreshTokenEntity refreshToken = _tokenService.GenerateRefreshToken(user.Id);
-        await _dbContext.RefreshTokens.AddAsync(refreshToken);
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(user.Id, salt, out string refreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
+
 
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken.RefreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
+
+
+    public async Task<Result<string>> ResendVerificationEmail(int userId)
+    {
+        UserEntity? user = await _dbContext.Users.FindAsync(userId);
+        if (user == null)
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        if (user.IsVerified)
+            return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
+
+        Result<string> emailResult = await _emailService.SendVerificationEmail(user.Username, user.Email);
+
+        if (!emailResult.IsSuccess)
+            return Result<string>.Error(emailResult.ErrorMessage!, StatusCodes.Status500InternalServerError);
+
+        return Result<string>.Success("Verification email sent.");
+    }
+
+    // public async Task<Result<string>> ConfirmVerificationEmail(string verificationToken)
+    // {
+    //     UserEntity? user = await _dbContext.Users.FindAsync(userId);
+    //     if (user == null)
+    //         return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+    //     if (user.IsVerified)
+    //         return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
+
+    //     user.IsVerified = true;
+    //     await _dbContext.SaveChangesAsync();
+
+    //     return Result<string>.Success("User verified.");
+    // }
+
 }
