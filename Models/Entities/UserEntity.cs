@@ -43,6 +43,8 @@ public class UserEntity
     public HashSet<TaskEntity> CompletedTasks { get; } = [];
     public HashSet<RefreshTokenEntity> RefreshTokens { get; } = [];
 
+    public HashSet<VerificationTokenEntity> VerificationTokens { get; } = [];
+
     /// <summary>
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase

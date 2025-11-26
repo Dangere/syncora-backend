@@ -131,6 +131,21 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
+    options.AddPolicy("email-policy", httpContext =>
+{
+    var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    return RateLimitPartition.GetFixedWindowLimiter(partitionKey: clientIp, factory: _ =>
+    {
+        return new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5, // Max 10 requests
+            Window = TimeSpan.FromHours(1), // Per 1 hour window
+            QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
+        };
+    });
+});
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.OnRejected = async (context, cancellationToken) =>
     {

@@ -15,10 +15,10 @@ public static class Hashing
         return Convert.ToBase64String(salt);
     }
 
-    public static string HashString(string password, string salt)
+    public static string HashString(string str, string? salt)
     {
-        byte[] saltBytes = Convert.FromBase64String(salt);
-        using var Pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000, HashAlgorithmName.SHA256);
+        byte[] saltBytes = Convert.FromBase64String(salt ?? string.Empty);
+        using var Pbkdf2 = new Rfc2898DeriveBytes(str, saltBytes, 10000, HashAlgorithmName.SHA256);
 
         byte[] hashBytes = Pbkdf2.GetBytes(32);
 

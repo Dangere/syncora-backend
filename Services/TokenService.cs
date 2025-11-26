@@ -79,11 +79,25 @@ public class TokenService(IConfiguration configuration)
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         string refreshTokenHash = Hashing.HashString(generatedToken, salt);
         int expiryDays = int.Parse(_config.GetSection("RefreshToken")["TokenExpiryDays"]!);
-        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.CreateToken(userId, refreshTokenHash, expiryDays, false);
+        RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.CreateToken(userId, refreshTokenHash, expiryDays);
 
         refreshToken = generatedToken;
 
         return refreshTokenEntity;
+
+    }
+
+
+    public VerificationTokenEntity GenerateVerificationToken(int userId, out string verificationTokens)
+    {
+        string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        string verificationTokenHash = Hashing.HashString(generatedToken, null);
+        int expiryMinutes = int.Parse(_config.GetSection("VerificationToken")["TokenExpiryMinutes"]!);
+        VerificationTokenEntity verificationTokenEntity = VerificationTokenEntity.CreateToken(userId, verificationTokenHash, expiryMinutes);
+
+        verificationTokens = generatedToken;
+
+        return verificationTokenEntity;
 
     }
 

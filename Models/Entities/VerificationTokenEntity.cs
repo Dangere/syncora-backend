@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SyncoraBackend.Models.Entities;
 
-[Table("refresh_tokens", Schema = "public"), Index(nameof(UserId), nameof(HashedToken))]
-public class RefreshTokenEntity()
+[Table("verification_tokens", Schema = "public"), Index(nameof(UserId), nameof(HashedToken))]
+public class VerificationTokenEntity()
 {
     public int Id { get; set; }
 
@@ -23,12 +23,11 @@ public class RefreshTokenEntity()
     [Required]
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
-
     [Required]
-    public required bool IsRevoked { get; set; }
+    public required bool IsConsumed { get; set; }
 
 
-    public static RefreshTokenEntity CreateToken(int userId, string hashedToken, int expiryDays)
-    => new() { UserId = userId, HashedToken = hashedToken, ExpiresAt = DateTime.UtcNow.AddDays(expiryDays), IsRevoked = false };
+    public static VerificationTokenEntity CreateToken(int userId, string hashedToken, int expiryMinutes)
+    => new() { UserId = userId, HashedToken = hashedToken, ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes), IsConsumed = false };
 
 };

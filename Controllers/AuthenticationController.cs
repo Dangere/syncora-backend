@@ -6,12 +6,14 @@ using SyncoraBackend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using SyncoraBackend.Attributes;
+using SyncoraBackend.Enums;
 
 namespace SyncoraBackend.Controllers;
 
 
 // This controller doesn't have authorization, can be accessed by anyone
-[AllowAnonymous]
+
 [ApiController]
 [Route("api/[controller]")]
 [EnableRateLimiting("auth-policy")]
@@ -19,7 +21,10 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 {
     private readonly AuthService _authService = authService;
 
-    [HttpPost("login")]
+    private const string _verifyEmailEndpointName = "VerifyEmail";
+
+
+    [AllowAnonymous, HttpPost("login")]
     public async Task<IActionResult> LoginWithEmailAndPassword([FromBody] LoginRequestDTO loginRequest)
     {
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithEmailAndPassword(loginRequest.Email, loginRequest.Password);
@@ -32,10 +37,10 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
     }
 
-    [HttpPost("register")]
+    [AllowAnonymous, HttpPost("register")]
     public async Task<IActionResult> RegisterWithEmailAndPassword([FromBody] RegisterRequestDTO registerRequest)
     {
-        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.Username);
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.Username, "");
 
         if (!registerResult.IsSuccess)
             return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
@@ -45,7 +50,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
     }
 
-    [HttpPost("refresh-token")]
+    [AllowAnonymous, HttpPost("refresh-token")]
     public async Task<IActionResult> RefreshToken([FromBody] TokensDTO tokens)
     {
 
@@ -61,7 +66,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     }
 
 
-    [HttpPost("login/google/{idToken}")]
+    [AllowAnonymous, HttpPost("login/google/{idToken}")]
     public async Task<IActionResult> LoginWithGoogle(string idToken)
     {
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithGoogle(idToken);
@@ -71,7 +76,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
         return Ok(loginResult.Data);
     }
-    [HttpPost("register/google")]
+    [AllowAnonymous, HttpPost("register/google")]
     public async Task<IActionResult> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest)
     {
         Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithGoogle(registerWithGoogleRequest.IdToken, registerWithGoogleRequest.Username, registerWithGoogleRequest.Password);
@@ -81,4 +86,39 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
         return Ok(registerResult.Data);
     }
+
+    [AllowAnonymous, HttpGet("verify", Name = _verifyEmailEndpointName)]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+    {
+        Result<string> verifyResult = await _authService.ConfirmVerificationEmail(token);
+
+        if (!verifyResult.IsSuccess)
+            return StatusCode(verifyResult.ErrorStatusCode, verifyResult.ErrorMessage);
+
+
+        return Ok(verifyResult.Data);
+
+    }
+
+    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("verify/send"), EnableRateLimiting("email-policy")]
+    public async Task<IActionResult> SendEmailVerification()
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        string? verifyUrl = Url.Link(
+            routeName: _verifyEmailEndpointName,
+            null
+        );
+        if (verifyUrl == null)
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate verification URL" });
+
+        Result<string> emailResult = await _authService.SendVerificationEmail(userId, verifyUrl);
+
+        if (!emailResult.IsSuccess)
+            return StatusCode(emailResult.ErrorStatusCode, emailResult.ErrorMessage);
+
+
+        return Ok(emailResult.Data);
+    }
+
 }

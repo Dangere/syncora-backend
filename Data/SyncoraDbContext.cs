@@ -14,6 +14,8 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
     public DbSet<DeletedRecord> DeletedRecords { get; set; }
 
     public DbSet<RefreshTokenEntity> RefreshTokens { get; set; }
+    public DbSet<VerificationTokenEntity> VerificationTokens { get; set; }
+
 
 
 
@@ -41,6 +43,9 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
 
         // One-to-Many: A User has many groups, while groups can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.OwnedGroups).WithOne(tg => tg.OwnerUser).HasForeignKey(tg => tg.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+
+        // One-to-Many: A User has many verification tokens, while verification token can be owned by only one user
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.VerificationTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
 
         // One-to-Many: A User has many refresh tokens, while refresh token can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.RefreshTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);

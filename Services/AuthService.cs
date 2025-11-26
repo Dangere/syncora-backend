@@ -15,13 +15,15 @@ using System.Security.Cryptography;
 
 namespace SyncoraBackend.Services;
 
-public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration)
+public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration, LinkGenerator linkGenerator)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly TokenService _tokenService = tokenService;
     private readonly EmailService _emailService = emailService;
     private readonly IConfiguration _config = configuration;
+
+    private readonly LinkGenerator _linkGenerator = linkGenerator;
 
     // You should NOT create an access token from a username/password request.
     // Username/password requests aren't authenticated and are vulnerable to impersonation and phishing attacks.
@@ -53,7 +55,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(string email, string password, string username)
+    public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(string email, string password, string username, string apiBaseUrl)
     {
         // Validate email's and password's formats
         if (!Validators.ValidateEmail(email))
@@ -96,7 +98,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         await _dbContext.SaveChangesAsync();
 
         // Send verification email
-        Result<string> emailResult = await _emailService.SendVerificationEmail(username, email);
+        _ = SendVerificationEmail(user.Id, apiBaseUrl);
 
         // if (!emailResult.IsSuccess)
         //     return Result<AuthenticationResponseDTO>.Error("Failed to send verification email.");
@@ -107,48 +109,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
-    public async Task<Result<TokensDTO>> RefreshToken(string expiredAccessToken, string refreshToken)
-    {
-        ClaimsPrincipal claimsFromExpiredToken;
-        try
-        {
-            claimsFromExpiredToken = _tokenService.ExtractPrincipalFromToken(expiredAccessToken, false);
-        }
-        catch (Exception e)
-        {
-            return Result<TokensDTO>.Error(e.Message, StatusCodes.Status401Unauthorized);
-        }
 
-        int userId = int.Parse(claimsFromExpiredToken.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        string? salt = await _dbContext.Users.Where(u => u.Id == userId).Select(u => u.Salt).FirstOrDefaultAsync();
-
-        if (salt == null)
-            return Result<TokensDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
-
-        // Check if refresh token is valid
-        string refreshTokenHash = Hashing.HashString(refreshToken, salt);
-
-        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.HashedToken == refreshTokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
-
-        if (tokenEntity == null)
-            return Result<TokensDTO>.Error("Invalid refresh token.", StatusCodes.Status401Unauthorized);
-
-        tokenEntity.IsRevoked = true;
-
-        // Generate refresh token, and store it hashed
-        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(userId, salt, out string newRefreshToken);
-        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
-        await _dbContext.SaveChangesAsync();
-
-
-        // Generate access token
-        UserEntity user = await _dbContext.Users.FirstAsync(u => u.Id == userId);
-        string accessToken = _tokenService.GenerateAccessToken(user);
-
-        return Result<TokensDTO>.Success(new TokensDTO(accessToken, newRefreshToken));
-
-
-    }
 
     public async Task<Result<AuthenticationResponseDTO>> LoginWithGoogle(string idToken)
     {
@@ -248,8 +209,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-
-    public async Task<Result<string>> ResendVerificationEmail(int userId)
+    // Remember to use stricter rate limiting in controllers
+    public async Task<Result<string>> SendVerificationEmail(int userId, string verifyUrl)
     {
         UserEntity? user = await _dbContext.Users.FindAsync(userId);
         if (user == null)
@@ -258,7 +219,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         if (user.IsVerified)
             return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
 
-        Result<string> emailResult = await _emailService.SendVerificationEmail(user.Username, user.Email);
+        // Generate verification token and add it to the database
+        VerificationTokenEntity verificationTokenEntity = _tokenService.GenerateVerificationToken(user.Id, out string verificationToken);
+        await _dbContext.VerificationTokens.AddAsync(verificationTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+        // Send verification email with the raw verification token
+        Result<string> emailResult = await _emailService.SendVerificationEmail(user.Username, user.Email, verifyUrl + $"?token={verificationToken}");
 
         if (!emailResult.IsSuccess)
             return Result<string>.Error(emailResult.ErrorMessage!, StatusCodes.Status500InternalServerError);
@@ -266,19 +233,82 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<string>.Success("Verification email sent.");
     }
 
-    // public async Task<Result<string>> ConfirmVerificationEmail(string verificationToken)
-    // {
-    //     UserEntity? user = await _dbContext.Users.FindAsync(userId);
-    //     if (user == null)
-    //         return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+    public async Task<Result<string>> ConfirmVerificationEmail(string verificationToken)
+    {
+        string verificationTokenHash = Hashing.HashString(verificationToken, null);
+        VerificationTokenEntity? tokenEntity = await _dbContext.VerificationTokens.AsTracking().Where(t => t.HashedToken == verificationTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
-    //     if (user.IsVerified)
-    //         return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
+        if (tokenEntity == null)
+            return Result<string>.Error("Invalid verification token. Expired or already consumed.", StatusCodes.Status400BadRequest);
 
-    //     user.IsVerified = true;
-    //     await _dbContext.SaveChangesAsync();
+        UserEntity? user = await _dbContext.Users.FindAsync(tokenEntity.UserId);
+        if (user == null)
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-    //     return Result<string>.Success("User verified.");
-    // }
+        if (user.IsVerified)
+            return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
 
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            user.IsVerified = true;
+            await _dbContext.SaveChangesAsync();
+
+            await _dbContext.VerificationTokens.Where(t => t.UserId == user.Id).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
+
+
+            // Commit transaction if all commands succeed, transaction will auto-rollback
+            // when disposed if either commands fails
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return Result<string>.Error("Failed to verify user.", StatusCodes.Status500InternalServerError);
+        }
+
+        return Result<string>.Success("User verified.");
+    }
+    public async Task<Result<TokensDTO>> RefreshToken(string expiredAccessToken, string refreshToken)
+    {
+        ClaimsPrincipal claimsFromExpiredToken;
+        try
+        {
+            claimsFromExpiredToken = _tokenService.ExtractPrincipalFromToken(expiredAccessToken, false);
+        }
+        catch (Exception e)
+        {
+            return Result<TokensDTO>.Error(e.Message, StatusCodes.Status401Unauthorized);
+        }
+
+        int userId = int.Parse(claimsFromExpiredToken.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        string? salt = await _dbContext.Users.Where(u => u.Id == userId).Select(u => u.Salt).FirstOrDefaultAsync();
+
+        if (salt == null)
+            return Result<TokensDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        // Check if refresh token is valid
+        string refreshTokenHash = Hashing.HashString(refreshToken, salt);
+
+        RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.HashedToken == refreshTokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+
+        if (tokenEntity == null)
+            return Result<TokensDTO>.Error("Invalid refresh token.", StatusCodes.Status401Unauthorized);
+
+        tokenEntity.IsRevoked = true;
+
+        // Generate refresh token, and store it hashed
+        RefreshTokenEntity refreshTokenEntity = _tokenService.GenerateRefreshToken(userId, salt, out string newRefreshToken);
+        await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+
+        // Generate access token
+        UserEntity user = await _dbContext.Users.FirstAsync(u => u.Id == userId);
+        string accessToken = _tokenService.GenerateAccessToken(user);
+
+        return Result<TokensDTO>.Success(new TokensDTO(accessToken, newRefreshToken));
+
+
+    }
 }

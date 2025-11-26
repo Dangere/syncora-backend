@@ -12,8 +12,15 @@ public class EmailService(IConfiguration configuration)
 
 
 
-    public async Task<Result<string>> SendVerificationEmail(string toUsername, string toEmail)
+    public async Task<Result<string>> SendVerificationEmail(string toUsername, string toEmail, string url)
     {
+
+        bool result = Uri.TryCreate(url, UriKind.Absolute, out Uri? uriResult)
+            && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+
+        if (!result)
+            return Result<string>.Error("Invalid URL.");
+
         var message = new MimeMessage();
 
         message.From.Add(new MailboxAddress("Syncora", _config.GetValue<string>("EmailingConfig:Sender")));
@@ -23,7 +30,7 @@ public class EmailService(IConfiguration configuration)
 
         message.Body = new TextPart("plain")
         {
-            Text = "Hello! To verify your email, click the following link: https://syncora.com/verify-email"
+            Text = $"Hello! To verify your email, click the following link: {url}"
         };
 
         using var client = new SmtpClient();
