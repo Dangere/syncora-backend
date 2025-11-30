@@ -23,20 +23,18 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     // When its the first time the client is syncing (i.e logging in), it will get all the data using an old 'since' timestamp
     // After the initial sync, it will get all the data since the last sync, by returning data with a 'LastModifiedDate' later than the last sync
     // This way after the initial sync, the client will get only the newly added data to be cached, and only that. making for a smaller payload
+
     // The method will return added, modified or deleted groups
     // The method will return added, modified or deleted tasks
     // The method will return modified or added users to groups, however it will not return deleted users, because the client will know if users are in groups and automatically delete them
     // The client takes the data and stores it locally by inserting and updating the groups, tasks and users
 
-    // TODO: Add deleted groups in record when a user deletes their account
-    // TODO: Add deleted tasks in record when a group is deleted
     // TODO: Update groups when a user deletes their account
-    // TODO: Make all clients call the sync endpoint whenever someone modifies data  (Done)
     // Remember: The client will also delete all tasks associated with a group on group deletion cascading, the same goes for groups when owner deletes their account
 
-    // BUG: When a user is added to a group and they are given a sync payload for the first time, the user gets their own user data because their JoinedAt is later than the last sync
-    // BUG:  When a user is added to a group and they are given a sync payload for the first time, they don't get the already added users in the group
-    // BUG: When a shared user tried to get a payload, they get the data for all the member in group, EXCEPT the owner's user data
+    // BUG: When a user is added to a group and they are given a sync payload for the first time, the user gets their own user data because their JoinedAt is later than the last sync (Solved)
+    // BUG: When a user is added to a group and they are given a sync payload for the first time, they don't get the already added users in the group (Solved)
+    // BUG: When a shared user tries to get a payload, they get the data for all the member in group, EXCEPT the owner's user data (Solved)
     public async Task<Result<Dictionary<string, object>>> SyncSinceTimestamp(int userId, DateTime since, bool includeDeleted = false)
     {
         DateTime utcSince = since.Kind == DateTimeKind.Utc ? since : since.ToUniversalTime();

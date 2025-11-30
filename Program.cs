@@ -140,7 +140,7 @@ builder.Services.AddRateLimiter(options =>
         return new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5, // Max 10 requests
-            Window = TimeSpan.FromHours(1), // Per 1 hour window
+            Window = TimeSpan.FromMinutes(1), // Per 1 hour window
             QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
         };
     });

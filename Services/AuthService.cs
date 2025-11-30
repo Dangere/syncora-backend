@@ -11,6 +11,7 @@ using System.Security.Claims;
 using Google.Apis.Auth;
 using SyncoraBackend.Migrations;
 using System.Security.Cryptography;
+using System.Net;
 
 
 namespace SyncoraBackend.Services;
@@ -224,8 +225,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         await _dbContext.VerificationTokens.AddAsync(verificationTokenEntity);
         await _dbContext.SaveChangesAsync();
 
+        // Encode verification token which will be automatically decoded by the browser 
+        string webEncodedToken = WebUtility.UrlEncode(verificationToken);
+
         // Send verification email with the raw verification token
-        Result<string> emailResult = await _emailService.SendVerificationEmail(user.Username, user.Email, verifyUrl + $"?token={verificationToken}");
+        Result<string> emailResult = await _emailService.SendVerificationEmail(user.Username, user.Email, verifyUrl + $"?token={webEncodedToken}");
 
         if (!emailResult.IsSuccess)
             return Result<string>.Error(emailResult.ErrorMessage!, StatusCodes.Status500InternalServerError);
@@ -310,5 +314,15 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<TokensDTO>.Success(new TokensDTO(accessToken, newRefreshToken));
 
 
+    }
+
+
+    public async Task<Result<bool>> CheckUserVerification(int userId)
+    {
+        bool? verified = await _dbContext.Users.Where(u => u.Id == userId).Select(u => u.IsVerified).FirstOrDefaultAsync();
+        if (verified == null)
+            return Result<bool>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        return Result<bool>.Success(verified ?? false);
     }
 }
