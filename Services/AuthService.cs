@@ -221,6 +221,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
 
         // Generate verification token and add it to the database
+        await _dbContext.VerificationTokens.Where(t => t.UserId == userId).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
         VerificationTokenEntity verificationTokenEntity = _tokenService.GenerateVerificationToken(user.Id, out string verificationToken);
         await _dbContext.VerificationTokens.AddAsync(verificationTokenEntity);
         await _dbContext.SaveChangesAsync();

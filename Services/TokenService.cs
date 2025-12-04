@@ -101,4 +101,18 @@ public class TokenService(IConfiguration configuration)
 
     }
 
+
+    //     public VerificationTokenEntity GeneratePasswordRestToken(int userId, out string passwordRestToken)
+    // {
+    //     string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    //     string passwordRestTokenHash = Hashing.HashString(generatedToken, null);
+    //     int expiryMinutes = int.Parse(_config.GetSection("VerificationToken")["TokenExpiryMinutes"]!);
+    //     VerificationTokenEntity verificationTokenEntity = VerificationTokenEntity.CreateToken(userId, verificationTokenHash, expiryMinutes);
+
+    //     passwordRestToken = generatedToken;
+
+    //     return passwordRestToken;
+
+    // }
+
 }

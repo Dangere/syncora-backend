@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Register AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
+builder.Services.AddRazorPages();
 // Add controllers, Lifecycle: Transient but behaves like scoped because it gets created per HTTP request
 builder.Services.AddControllers();
 
@@ -167,8 +168,14 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
+// Add middleware to serve static files
+app.UseStaticFiles();
+
 app.UseRouting();
 app.UseRateLimiter();
+
+// Map razor and controller endpoints
+app.MapRazorPages();
 app.MapControllers();
 
 // Using authentication and authorization middleware to secure endpoints
@@ -178,7 +185,6 @@ app.UseAuthorization();
 app.MapHub<SyncHub>("/hubs/sync");
 app.MapHub<SyncHub>("/hubs/notification");
 
-app.MapGet("/", () => "Hello World!");
 
 Console.WriteLine($"\n Running with connection string: {builder.Configuration.GetConnectionString("LocalConnection")}");
 app.Run();
