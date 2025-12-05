@@ -121,4 +121,26 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         return Ok(emailResult.Data);
     }
 
+
+    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("password-reset/send"), EnableRateLimiting("email-policy")]
+    public async Task<IActionResult> SendEmailPasswordReset()
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        string? passwordRestPageUrl = Url.Page(pageName: "/Auth/PasswordReset", values
+        : null, pageHandler: null, protocol: Request.Scheme, host: Request.Host.ToString()
+        );
+
+
+        if (passwordRestPageUrl == null)
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate password reset page URL" });
+
+        Result<string> emailResult = await _authService.SendPasswordResetEmail(userId, passwordRestPageUrl);
+
+        if (!emailResult.IsSuccess)
+            return StatusCode(emailResult.ErrorStatusCode, emailResult.ErrorMessage);
+
+
+        return Ok(emailResult.Data);
+    }
 }

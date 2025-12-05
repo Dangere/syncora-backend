@@ -5,19 +5,29 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SyncoraBackend.Data;
+using SyncoraBackend.Migrations;
+using SyncoraBackend.Models.Entities;
+using SyncoraBackend.Services;
+using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Pages.Auth;
 
-public class PasswordResetModel(ILogger<PasswordResetModel> logger) : PageModel
+public class PasswordResetModel(ILogger<PasswordResetModel> logger, AuthService authService) : PageModel
 {
     private readonly ILogger<PasswordResetModel> _logger = logger;
+    private readonly AuthService _authService = authService;
 
     [BindProperty(SupportsGet = true)]
     public string Token { get; set; } = string.Empty;
 
     [BindProperty]
     public InputModel Input { get; set; } = null!;
+
+    [TempData]
+    public string? Message { get; set; }
 
 
     public class InputModel
@@ -29,26 +39,49 @@ public class PasswordResetModel(ILogger<PasswordResetModel> logger) : PageModel
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-    public void OnGet()
+    public async Task<IActionResult> OnGet()
     {
+        Message = null;
         if (string.IsNullOrEmpty(Token))
         {
-            Response.Redirect("/index");
+            Console.WriteLine("Token is empty");
+            Message = "Invalid password reset token. Expired or already consumed.";
         }
+
+        Result<string> result = await _authService.ValidatePasswordResetToken(Token);
+
+        if (!result.IsSuccess)
+        {
+            Message = result.ErrorMessage!;
+        }
+
+        return Page();
 
     }
 
 
-    public void OnPost()
+    public async Task<IActionResult> OnPost()
     {
-
+        // Check if model is valid
         if (!ModelState.IsValid)
         {
-            return;
+            return Page();
         }
 
 
-        Console.WriteLine("Your password is " + Input.Password);
+        Result<string> result = await _authService.ValidatePasswordResetToken(Token, consumeTokenOnSuccess: true);
+        if (!result.IsSuccess)
+        {
+            Message = result.ErrorMessage!;
+        }
+
+        // Change password
+
+
+
+        Message = "Password changed!";
+        return Page();
+
 
     }
 }

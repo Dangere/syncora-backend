@@ -326,4 +326,52 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         return Result<bool>.Success(verified ?? false);
     }
+
+    // Remember to use stricter rate limiting in controllers
+    public async Task<Result<string>> SendPasswordResetEmail(int userId, string passwordResetPageUrl)
+    {
+        UserEntity? user = await _dbContext.Users.FindAsync(userId);
+        if (user == null)
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+
+        // Generate password reset token and add it to the database
+        await _dbContext.PasswordResetTokens.Where(t => t.UserId == userId).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
+        PasswordResetTokenEntity passwordResetTokenEntity = _tokenService.GeneratePasswordResetToken(user.Id, out string passwordResetToken);
+        await _dbContext.PasswordResetTokens.AddAsync(passwordResetTokenEntity);
+        await _dbContext.SaveChangesAsync();
+
+        // Encode password reset token which will be automatically decoded by the browser 
+        string webEncodedToken = WebUtility.UrlEncode(passwordResetToken);
+
+        // Send password reset email with the raw password reset token
+        Result<string> emailResult = await _emailService.SendResetPasswordEmail(user.Username, user.Email, passwordResetPageUrl + $"?token={webEncodedToken}");
+
+        if (!emailResult.IsSuccess)
+            return Result<string>.Error(emailResult.ErrorMessage!, StatusCodes.Status500InternalServerError);
+
+        return Result<string>.Success("Password reset email sent.");
+    }
+
+    public async Task<Result<string>> ValidatePasswordResetToken(string passwordResetToken, bool consumeTokenOnSuccess = false)
+    {
+        // Get hashed token
+        string passwordResetTokenHash = Hashing.HashString(passwordResetToken, null);
+
+        // Verify token
+        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens.AsTracking().Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+
+        if (tokenEntity == null)
+            return Result<string>.Error("Invalid password reset token. Expired or already consumed.", StatusCodes.Status400BadRequest);
+
+
+        if (consumeTokenOnSuccess)
+        {
+            tokenEntity.IsConsumed = true;
+            await _dbContext.SaveChangesAsync();
+        }
+
+        return Result<string>.Success("Password reset token is valid.");
+    }
+
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Enums;
 
@@ -44,6 +45,8 @@ public class UserEntity
     public HashSet<RefreshTokenEntity> RefreshTokens { get; } = [];
 
     public HashSet<VerificationTokenEntity> VerificationTokens { get; } = [];
+    public HashSet<PasswordResetTokenEntity> PasswordResetTokens { get; } = [];
+
 
     /// <summary>
     ///     Creates a new UserEntity instance with the given parameters,

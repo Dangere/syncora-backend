@@ -15,6 +15,8 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
 
     public DbSet<RefreshTokenEntity> RefreshTokens { get; set; }
     public DbSet<VerificationTokenEntity> VerificationTokens { get; set; }
+    public DbSet<PasswordResetTokenEntity> PasswordResetTokens { get; set; }
+
 
 
 
@@ -28,24 +30,16 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         modelBuilder.Entity<TaskEntity>().HasMany(t => t.AssignedTo).WithMany(u => u.AssignedTasks);
         modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany(u => u.CompletedTasks).HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.NoAction);
 
-
-        // modelBuilder.Entity<TaskEntity>(t =>
-        //    {
-        //        t.HasOne<UserEntity>()
-        //         .WithMany()
-        //         .HasForeignKey(t => t.CompletedById)
-        //         .OnDelete(DeleteBehavior.NoAction);
-        //    });
-
-
-
         // modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany().HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.Cascade);
 
         // One-to-Many: A User has many groups, while groups can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.OwnedGroups).WithOne(tg => tg.OwnerUser).HasForeignKey(tg => tg.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
 
-        // One-to-Many: A User has many verification tokens, while verification token can be owned by only one user
-        modelBuilder.Entity<UserEntity>().HasMany(u => u.VerificationTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
+        // One-to-Many: A User has many verification tokens (only one can be active), while verification token can be owned by only one user
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.VerificationTokens).WithOne(rt => rt.User).HasForeignKey(vt => vt.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        // One-to-Many: A User has many reset password tokens (only one can be active), while reset password token can be owned by only one user
+        modelBuilder.Entity<UserEntity>().HasMany(u => u.PasswordResetTokens).WithOne(rt => rt.User).HasForeignKey(rp => rp.UserId).OnDelete(DeleteBehavior.Cascade);
 
         // One-to-Many: A User has many refresh tokens, while refresh token can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.RefreshTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
