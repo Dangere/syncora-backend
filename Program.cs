@@ -31,6 +31,9 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddSingleton<InMemoryHubConnectionManager>();
 
 
+builder.Services.AddScoped<AdminServices>();
+
+
 // Add Hubs, Lifecycle: Singleton
 // builder.Services.AddSingleton<SyncHub>();
 // builder.Services.AddSingleton<NotificationHub>();
