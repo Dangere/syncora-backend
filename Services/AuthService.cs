@@ -39,7 +39,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         if (user == null)
             return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
 
-        string hash = Hashing.HashString(password, user.Salt);
+        string hash = Hashing.HashPassword(password, user.Salt);
 
         if (!string.Equals(hash, user.Hash))
             return Result<AuthenticationResponseDTO>.Error("Invalid credentials.");
@@ -83,7 +83,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         // Generate salt and hash
         string salt = Hashing.GenerateSalt();
-        string passwordHash = Hashing.HashString(password, salt);
+        string passwordHash = Hashing.HashPassword(password, salt);
 
         // Create user without verified email
         UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false);
@@ -188,7 +188,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         // Generate salt and hash
         string salt = Hashing.GenerateSalt();
-        string hash = Hashing.HashString(password, salt);
+        string hash = Hashing.HashPassword(password, salt);
 
         // Create user with verified email
         UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true);
@@ -240,7 +240,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
     public async Task<Result<string>> ConfirmVerificationEmail(string verificationToken)
     {
-        string verificationTokenHash = Hashing.HashString(verificationToken, null);
+        string verificationTokenHash = Hashing.HashToken(verificationToken, null);
         VerificationTokenEntity? tokenEntity = await _dbContext.VerificationTokens.AsTracking().Where(t => t.HashedToken == verificationTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
         if (tokenEntity == null)
@@ -293,7 +293,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<TokensDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
         // Check if refresh token is valid
-        string refreshTokenHash = Hashing.HashString(refreshToken, salt);
+        string refreshTokenHash = Hashing.HashToken(refreshToken, salt);
 
         RefreshTokenEntity? tokenEntity = await _dbContext.RefreshTokens.AsTracking().Where(t => t.UserId == userId && t.HashedToken == refreshTokenHash && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
@@ -353,25 +353,63 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<string>.Success("Password reset email sent.");
     }
 
-    public async Task<Result<string>> ValidatePasswordResetToken(string passwordResetToken, bool consumeTokenOnSuccess = false)
+    public async Task<Result<string>> ValidatePasswordResetToken(string passwordResetToken)
     {
         // Get hashed token
-        string passwordResetTokenHash = Hashing.HashString(passwordResetToken, null);
+        string passwordResetTokenHash = Hashing.HashToken(passwordResetToken, null);
 
         // Verify token
-        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens.AsTracking().Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens.AsNoTracking().Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
 
         if (tokenEntity == null)
             return Result<string>.Error("Invalid password reset token. Expired or already consumed.", StatusCodes.Status400BadRequest);
 
+        return Result<string>.Success("Password reset token is valid.");
+    }
 
-        if (consumeTokenOnSuccess)
+
+    public async Task<Result<string>> UpdateUserPassword(string passwordResetToken, string newPassword)
+    {
+        // Get hashed token
+        string passwordResetTokenHash = Hashing.HashToken(passwordResetToken, null);
+
+        // Verify token again
+        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens.AsTracking().Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+
+        if (tokenEntity == null)
+            return Result<string>.Error("Invalid password reset token. Expired or already consumed.", StatusCodes.Status400BadRequest);
+        UserEntity? user = await _dbContext.Users.AsTracking().Where(u => u.Id == tokenEntity.UserId).FirstOrDefaultAsync();
+        if (user == null)
+            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        // Generate salt and hash
+        string salt = Hashing.GenerateSalt();
+        string passwordHash = Hashing.HashPassword(newPassword, salt);
+
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
         {
+            // Mark token as consumed
             tokenEntity.IsConsumed = true;
+
+            // Revoke refresh tokens to force user to log out from all sessions (they will become invalid anyway because we are updating the salt)
+            await _dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsRevoked, true));
+
+            // Update user password and salt
+            user.Salt = salt;
+            user.Hash = passwordHash;
+
             await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            return Result<string>.Error("Failed to update user password.", StatusCodes.Status500InternalServerError);
         }
 
-        return Result<string>.Success("Password reset token is valid.");
+        return Result<string>.Success("Password updated.");
     }
 
 }

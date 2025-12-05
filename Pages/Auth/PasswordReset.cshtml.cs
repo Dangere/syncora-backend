@@ -68,20 +68,14 @@ public class PasswordResetModel(ILogger<PasswordResetModel> logger, AuthService 
             return Page();
         }
 
-
-        Result<string> result = await _authService.ValidatePasswordResetToken(Token, consumeTokenOnSuccess: true);
+        // This both validates the token and updates the password if token is valid and consumes it
+        Result<string> result = await _authService.UpdateUserPassword(Token, Input.Password);
         if (!result.IsSuccess)
-        {
-            Message = result.ErrorMessage!;
-        }
-
-        // Change password
+            Message = result.ErrorMessage;
+        else
+            Message = "Password changed!";
 
 
-
-        Message = "Password changed!";
         return Page();
-
-
     }
 }
