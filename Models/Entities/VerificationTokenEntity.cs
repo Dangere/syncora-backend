@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SyncoraBackend.Models.Entities;
 
-[Table("verification_tokens", Schema = "public"), Index(nameof(UserId), nameof(HashedToken))]
+[Table("verification_tokens", Schema = "public"), Index(nameof(HashedToken), nameof(IsConsumed), nameof(ExpiresAt), IsUnique = true)]
 public class VerificationTokenEntity()
 {
     public int Id { get; set; }

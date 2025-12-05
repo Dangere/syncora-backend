@@ -77,7 +77,7 @@ public class TokenService(IConfiguration configuration)
     public RefreshTokenEntity GenerateRefreshToken(int userId, string salt, out string refreshToken)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        string refreshTokenHash = Hashing.HashString(generatedToken, salt);
+        string refreshTokenHash = Hashing.HashToken(generatedToken, salt);
         int expiryDays = int.Parse(_config.GetSection("RefreshToken")["TokenExpiryDays"]!);
         RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.CreateToken(userId, refreshTokenHash, expiryDays);
 
@@ -91,7 +91,7 @@ public class TokenService(IConfiguration configuration)
     public VerificationTokenEntity GenerateVerificationToken(int userId, out string verificationTokens)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        string verificationTokenHash = Hashing.HashString(generatedToken, null);
+        string verificationTokenHash = Hashing.HashToken(generatedToken, null);
         int expiryMinutes = int.Parse(_config.GetSection("VerificationToken")["TokenExpiryMinutes"]!);
         VerificationTokenEntity verificationTokenEntity = VerificationTokenEntity.CreateToken(userId, verificationTokenHash, expiryMinutes);
 
@@ -105,7 +105,7 @@ public class TokenService(IConfiguration configuration)
     public PasswordResetTokenEntity GeneratePasswordResetToken(int userId, out string passwordResetToken)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-        string passwordResetTokenHash = Hashing.HashString(generatedToken, null);
+        string passwordResetTokenHash = Hashing.HashToken(generatedToken, null);
         int expiryMinutes = int.Parse(_config.GetSection("PasswordResetToken")["TokenExpiryMinutes"]!);
         PasswordResetTokenEntity passwordResetTokenEntity = PasswordResetTokenEntity.CreateToken(userId, passwordResetTokenHash, expiryMinutes);
 

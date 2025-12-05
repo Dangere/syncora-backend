@@ -12,19 +12,19 @@ using Google.Apis.Auth;
 using SyncoraBackend.Migrations;
 using System.Security.Cryptography;
 using System.Net;
+using SyncoraBackend.Models.Common;
 
 
 namespace SyncoraBackend.Services;
 
-public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration, LinkGenerator linkGenerator)
+public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration
+)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly TokenService _tokenService = tokenService;
     private readonly EmailService _emailService = emailService;
     private readonly IConfiguration _config = configuration;
-
-    private readonly LinkGenerator _linkGenerator = linkGenerator;
 
     // You should NOT create an access token from a username/password request.
     // Username/password requests aren't authenticated and are vulnerable to impersonation and phishing attacks.
@@ -86,7 +86,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string passwordHash = Hashing.HashPassword(password, salt);
 
         // Create user without verified email
-        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false);
+        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: new UserPreferences(true, "en"));
 
 
         // Save user
@@ -191,7 +191,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string hash = Hashing.HashPassword(password, salt);
 
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true);
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: new UserPreferences(true, "en"));
 
         // Save user
         await _dbContext.Users.AddAsync(user);
@@ -221,7 +221,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<string>.Error("User is already verified.", StatusCodes.Status400BadRequest);
 
         // Generate verification token and add it to the database
-        await _dbContext.VerificationTokens.Where(t => t.UserId == userId).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
+        await _dbContext.VerificationTokens.Where(t => t.UserId == user.Id && !t.IsConsumed).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
         VerificationTokenEntity verificationTokenEntity = _tokenService.GenerateVerificationToken(user.Id, out string verificationToken);
         await _dbContext.VerificationTokens.AddAsync(verificationTokenEntity);
         await _dbContext.SaveChangesAsync();
@@ -259,7 +259,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             user.IsVerified = true;
             await _dbContext.SaveChangesAsync();
 
-            await _dbContext.VerificationTokens.Where(t => t.UserId == user.Id).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
+            await _dbContext.VerificationTokens.Where(t => t.UserId == user.Id && !t.IsConsumed).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
 
 
             // Commit transaction if all commands succeed, transaction will auto-rollback
@@ -336,7 +336,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
 
         // Generate password reset token and add it to the database
-        await _dbContext.PasswordResetTokens.Where(t => t.UserId == userId).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
+        await _dbContext.PasswordResetTokens.Where(t => t.UserId == user.Id && !t.IsConsumed).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
         PasswordResetTokenEntity passwordResetTokenEntity = _tokenService.GeneratePasswordResetToken(user.Id, out string passwordResetToken);
         await _dbContext.PasswordResetTokens.AddAsync(passwordResetTokenEntity);
         await _dbContext.SaveChangesAsync();
@@ -394,7 +394,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             tokenEntity.IsConsumed = true;
 
             // Revoke refresh tokens to force user to log out from all sessions (they will become invalid anyway because we are updating the salt)
-            await _dbContext.RefreshTokens.Where(t => t.UserId == user.Id).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsRevoked, true));
+            await _dbContext.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsRevoked, true));
 
             // Update user password and salt
             user.Salt = salt;

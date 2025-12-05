@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Models.Common;
 
 namespace SyncoraBackend.Models.Entities;
 
@@ -29,6 +30,10 @@ public class UserEntity
 
     public string? ProfilePictureURL { get; set; } = null;
 
+    [Required]
+    public required UserPreferences Preferences { get; set; } = null!;
+
+
     // Using HashSet to avoid duplicate TaskEntity instances in memory.
     // One-to-Many: A user can own multiple groups, while groups can be owned by only one user
     public HashSet<GroupEntity> OwnedGroups { get; } = [];
@@ -52,8 +57,8 @@ public class UserEntity
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase
     /// </summary>
-    public static UserEntity CreateUser(string email, string username, string hash, string salt, UserRole role, bool isVerified)
-        => new() { Email = email.ToLower(), Username = username.ToLower(), Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
+    public static UserEntity CreateUser(string email, string username, string hash, string salt, UserRole role, bool isVerified, UserPreferences userPreferences)
+        => new() { Preferences = userPreferences, Email = email.ToLower(), Username = username.ToLower(), Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
 
 
 

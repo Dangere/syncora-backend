@@ -44,6 +44,14 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         // One-to-Many: A User has many refresh tokens, while refresh token can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.RefreshTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
 
+
+        modelBuilder.Entity<UserEntity>()
+        .OwnsOne(u => u.Preferences, builder =>
+        {
+            // This tells EF Core to store this object as a JSON string 
+            // inside a column named "Preferences"
+            builder.ToJson();
+        });
         // // Many-to-Many: A group can be accessed by multiple users, while users can have access to multiple group
         // modelBuilder.Entity<UserEntity>().HasMany(u => u.AccessibleGroups).WithMany(tg => tg.Members);
 

@@ -23,7 +23,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasksForUser(userId, groupId);
+        Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasks(userId, groupId);
 
         if (!tasksFetchResult.IsSuccess)
             return StatusCode(tasksFetchResult.ErrorStatusCode, tasksFetchResult.ErrorMessage);
@@ -37,7 +37,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<TaskDTO> fetchResult = await _taskService.GetTaskForUser(taskId, userId, groupId);
+        Result<TaskDTO> fetchResult = await _taskService.GetTask(taskId, userId, groupId);
 
         if (!fetchResult.IsSuccess)
             return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
@@ -50,7 +50,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<TaskDTO> createdResult = await _taskService.CreateTaskForUser(newTaskDTO, userId, groupId);
+        Result<TaskDTO> createdResult = await _taskService.CreateTask(newTaskDTO, userId, groupId);
 
         if (!createdResult.IsSuccess)
             return StatusCode(createdResult.ErrorStatusCode, createdResult.ErrorMessage);
@@ -63,7 +63,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> updateResult = await _taskService.UpdateTaskForUser(taskId, groupId, userId, updatedTaskDTO);
+        Result<string> updateResult = await _taskService.UpdateTask(taskId, groupId, userId, updatedTaskDTO);
 
         if (!updateResult.IsSuccess)
             return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
@@ -78,7 +78,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> assignResults = await _taskService.AssignTaskToUsers(taskId, groupId, userId, ids);
+        Result<string> assignResults = await _taskService.AssignTaskTo(taskId, groupId, userId, ids);
 
         if (!assignResults.IsSuccess)
             return StatusCode(assignResults.ErrorStatusCode, assignResults.ErrorMessage);
@@ -119,7 +119,7 @@ public class TasksController(TasksService taskService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> deleteResult = await _taskService.DeleteTaskForUser(taskId, groupId, userId);
+        Result<string> deleteResult = await _taskService.DeleteTask(taskId, groupId, userId);
 
         if (!deleteResult.IsSuccess)
             return StatusCode(deleteResult.ErrorStatusCode, deleteResult.ErrorMessage);

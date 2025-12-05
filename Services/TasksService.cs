@@ -14,7 +14,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
     private readonly ClientSyncService _clientSyncService = clientSyncService;
 
-    public async Task<Result<List<TaskDTO>>> GetTasksForUser(int userId, int groupId, DateTime? sinceUtc = null)
+    public async Task<Result<List<TaskDTO>>> GetTasks(int userId, int groupId, DateTime? sinceUtc = null)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks).Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -43,7 +43,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<List<TaskDTO>>.Success(tasksDTO);
     }
 
-    public async Task<Result<TaskDTO>> GetTaskForUser(int taskId, int userId, int groupId)
+    public async Task<Result<TaskDTO>> GetTask(int taskId, int userId, int groupId)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -62,7 +62,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     }
 
     // TODO: Change it so group members can complete tasks using this method or make a new method designed for that 
-    public async Task<Result<string>> UpdateTaskForUser(int taskId, int groupId, int userId, UpdateTaskDetailsDTO updatedTaskDTO)
+    public async Task<Result<string>> UpdateTask(int taskId, int groupId, int userId, UpdateTaskDetailsDTO updatedTaskDTO)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
@@ -89,7 +89,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return await UpdateTaskEntityDetails(taskEntity, updatedTaskDTO, userId);
     }
 
-    public async Task<Result<string>> DeleteTaskForUser(int taskId, int groupId, int userId)
+    public async Task<Result<string>> DeleteTask(int taskId, int groupId, int userId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
@@ -120,7 +120,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     }
 
     // Assigns a list of users to a task
-    public async Task<Result<string>> AssignTaskToUsers(int taskId, int groupId, int userId, int[] userIdsToAssign)
+    public async Task<Result<string>> AssignTaskTo(int taskId, int groupId, int userId, int[] userIdsToAssign)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
@@ -238,7 +238,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Task marked.");
     }
 
-    public async Task<Result<TaskDTO>> CreateTaskForUser(CreateTaskDTO newTaskDTO, int userId, int groupId)
+    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int userId, int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
@@ -263,35 +263,6 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         await _clientSyncService.NotifyGroupMembersToSync(groupId);
 
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
-    }
-    public async Task<Result<string>> UpdateTask(int id, int groupId, UpdateTaskDetailsDTO updatedTaskDTO)
-    {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
-        if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
-
-        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
-
-        if (taskEntity == null)
-            return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
-
-        return await UpdateTaskEntityDetails(taskEntity, updatedTaskDTO);
-    }
-
-    public async Task<Result<string>> RemoveTask(int id)
-    {
-        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(id);
-
-        if (taskEntity == null)
-            return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
-
-
-        // TODO: Store deleted tasks to return in the response for syncing with client
-        _dbContext.Tasks.Remove(taskEntity);
-        await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(taskEntity.GroupId);
-
-        return Result<string>.Success("Task deleted.");
     }
 
     private async Task<Result<string>> UpdateTaskEntityDetails(TaskEntity taskEntity, UpdateTaskDetailsDTO updatedTaskDTO, int? userId = null)

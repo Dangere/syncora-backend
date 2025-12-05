@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SyncoraBackend.Models.Entities;
 
-[Table("password_rest_tokens", Schema = "public"), Index(nameof(UserId), nameof(HashedToken))]
+[Table("password_rest_tokens", Schema = "public"), Index(nameof(HashedToken), nameof(IsConsumed), nameof(ExpiresAt), IsUnique = true)]
 public class PasswordResetTokenEntity()
 {
     public int Id { get; set; }
