@@ -52,7 +52,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -86,7 +86,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string passwordHash = Hashing.HashPassword(password, salt);
 
         // Create user without verified email
-        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: new UserPreferences(true, "en"));
+        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: new UserPreferences());
 
 
         // Save user
@@ -107,7 +107,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -148,7 +148,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -191,7 +191,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string hash = Hashing.HashPassword(password, salt);
 
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: new UserPreferences(true, "en"));
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: new UserPreferences());
 
         // Save user
         await _dbContext.Users.AddAsync(user);
@@ -206,7 +206,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user));
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
