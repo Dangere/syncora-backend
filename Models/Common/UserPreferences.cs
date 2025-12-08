@@ -9,7 +9,7 @@ public class UserPreferences
 {
     // 1. Private backing fields (EF Core will interact with these)
     private bool? _isDarkMode;
-    private dynamic? _language;
+    private Language? _language;
 
     // 2. Public properties with fallback logic
     public bool IsDarkMode

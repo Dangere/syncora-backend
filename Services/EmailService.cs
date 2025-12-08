@@ -51,7 +51,7 @@ public class EmailService(IConfiguration configuration)
 
             // Send
             await client.SendAsync(message);
-            Console.WriteLine("Email sent successfully!");
+            Console.WriteLine("Verification email sent successfully!");
             return Result<string>.Success("Email sent successfully!");
 
         }
@@ -106,7 +106,7 @@ public class EmailService(IConfiguration configuration)
 
             // Send
             await client.SendAsync(message);
-            Console.WriteLine("Email sent successfully!");
+            Console.WriteLine("Password reset email sent successfully!");
             return Result<string>.Success("Email sent successfully!");
 
         }

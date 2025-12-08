@@ -18,13 +18,16 @@ using SyncoraBackend.Models.Common;
 namespace SyncoraBackend.Services;
 
 public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration
-)
+, ClientSyncService clientSyncService)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly TokenService _tokenService = tokenService;
     private readonly EmailService _emailService = emailService;
     private readonly IConfiguration _config = configuration;
+
+    private readonly ClientSyncService _clientSyncService = clientSyncService;
+
 
     // You should NOT create an access token from a username/password request.
     // Username/password requests aren't authenticated and are vulnerable to impersonation and phishing attacks.
@@ -52,7 +55,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -101,7 +104,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
 
         // Send verification email
         _ = await SendVerificationEmail(user.Id, verifyUrl);
@@ -145,7 +148,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -203,7 +206,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
 
         // Send verification email
         _ = await SendVerificationEmail(user.Id, verifyUrl);
@@ -272,7 +275,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             await transaction.RollbackAsync();
             return Result<string>.Error("Failed to verify user.", StatusCodes.Status500InternalServerError);
         }
-
+        await _clientSyncService.NotifyUserVerification(user.Id);
         return Result<string>.Success("User verified.");
     }
     public async Task<Result<TokensDTO>> RefreshToken(string expiredAccessToken, string refreshToken)

@@ -134,6 +134,21 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         return Ok(emailResult.Data);
     }
 
+    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("verify/status")]
+    public async Task<IActionResult> CheckVerificationStatus()
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        Result<bool> checkResult = await _authService.CheckUserVerification(userId);
+
+        if (!checkResult.IsSuccess)
+            return StatusCode(checkResult.ErrorStatusCode, checkResult.ErrorMessage);
+
+
+        return Ok(checkResult.Data);
+    }
+
+
 
     [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("password-reset/send"), EnableRateLimiting("email-policy")]
     public async Task<IActionResult> SendEmailPasswordReset()

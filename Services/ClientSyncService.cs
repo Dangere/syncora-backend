@@ -119,4 +119,11 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
         Console.WriteLine("Sending sync payload");
         await _hubContext.Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync");
     }
+
+
+    public async Task NotifyUserVerification(int userId)
+    {
+        Console.WriteLine("Sending verification update");
+        await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceiveVerification", true);
+    }
 }

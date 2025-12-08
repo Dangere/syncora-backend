@@ -4,4 +4,4 @@ using SyncoraBackend.Models.DTOs.Users;
 
 namespace SyncoraBackend.Models.DTOs.Auth;
 
-public record AuthenticationResponseDTO([Required] TokensDTO Tokens, [Required] UserDTO UserData, [Required] UserPreferences UserPreferences);
+public record AuthenticationResponseDTO([Required] TokensDTO Tokens, [Required] UserDTO UserData, [Required] bool IsVerified, [Required] UserPreferences UserPreferences);
