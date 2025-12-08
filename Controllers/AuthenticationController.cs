@@ -40,7 +40,13 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     [AllowAnonymous, HttpPost("register")]
     public async Task<IActionResult> RegisterWithEmailAndPassword([FromBody] RegisterRequestDTO registerRequest)
     {
-        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest.Email, registerRequest.Password, registerRequest.Username, "");
+        string? verifyUrl = Url.Link(
+    routeName: _verifyEmailEndpointName,
+    null
+);
+        if (verifyUrl == null)
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate verification URL" });
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest, verifyUrl);
 
         if (!registerResult.IsSuccess)
             return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
@@ -79,7 +85,14 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     [AllowAnonymous, HttpPost("register/google")]
     public async Task<IActionResult> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest)
     {
-        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithGoogle(registerWithGoogleRequest.IdToken, registerWithGoogleRequest.Username, registerWithGoogleRequest.Password);
+        string? verifyUrl = Url.Link(
+            routeName: _verifyEmailEndpointName,
+            null
+        );
+        if (verifyUrl == null)
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate verification URL" });
+
+        Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithGoogle(registerWithGoogleRequest, verifyUrl);
 
         if (!registerResult.IsSuccess)
             return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);

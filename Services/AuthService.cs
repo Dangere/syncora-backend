@@ -56,37 +56,37 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(string email, string password, string username, string apiBaseUrl)
+    public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(RegisterRequestDTO registerRequest, string verifyUrl)
     {
         // Validate email's and password's formats
-        if (!Validators.ValidateEmail(email))
+        if (!Validators.ValidateEmail(registerRequest.Email))
         {
             return Result<AuthenticationResponseDTO>.Error("Email is not in valid format.");
 
         }
-        if (!Validators.ValidatePassword(password))
+        if (!Validators.ValidatePassword(registerRequest.Password))
         {
             return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
         }
 
         // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email) || EF.Functions.ILike(u.Username, username));
+        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, registerRequest.Email) || EF.Functions.ILike(u.Username, registerRequest.Username));
         if (userWithSameEmailOrUserName != null)
         {
-            if (userWithSameEmailOrUserName.Email == email)
+            if (userWithSameEmailOrUserName.Email.ToLower() == registerRequest.Email.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Email is already in use.", StatusCodes.Status409Conflict);
 
-            if (userWithSameEmailOrUserName.Username == username)
+            if (userWithSameEmailOrUserName.Username.ToLower() == registerRequest.Username.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Username is already in use.", StatusCodes.Status409Conflict);
             return Result<AuthenticationResponseDTO>.Error("Credentials already in use.");
         }
 
         // Generate salt and hash
         string salt = Hashing.GenerateSalt();
-        string passwordHash = Hashing.HashPassword(password, salt);
+        string passwordHash = Hashing.HashPassword(registerRequest.Password, salt);
 
         // Create user without verified email
-        UserEntity user = UserEntity.CreateUser(email: email, username: username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: registerRequest.Email, username: registerRequest.Username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: registerRequest.UserPreferences ?? new UserPreferences());
 
 
         // Save user
@@ -98,16 +98,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         await _dbContext.RefreshTokens.AddAsync(refreshTokenEntity);
         await _dbContext.SaveChangesAsync();
 
-        // Send verification email
-        _ = SendVerificationEmail(user.Id, apiBaseUrl);
-
-        // if (!emailResult.IsSuccess)
-        //     return Result<AuthenticationResponseDTO>.Error("Failed to send verification email.");
-
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+
+        // Send verification email
+        _ = await SendVerificationEmail(user.Id, verifyUrl);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -152,7 +149,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(string idToken, string username, string password)
+    public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest, string verifyUrl)
     {
         var jwtValidation = _config.GetSection("GoogleJWTValidation");
         var validationSettings = new GoogleJsonWebSignature.ValidationSettings
@@ -162,7 +159,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         GoogleJsonWebSignature.Payload payload;
         try
         {
-            payload = await GoogleJsonWebSignature.ValidateAsync(idToken, validationSettings);
+            payload = await GoogleJsonWebSignature.ValidateAsync(registerWithGoogleRequest.IdToken, validationSettings);
 
         }
         catch (Exception e)
@@ -173,13 +170,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         // TODO: Make sure to provide a way for a user to restore their account if someone already took it or they created it using manual registration
         // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, payload.Email) || EF.Functions.ILike(u.Username, username));
+        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, payload.Email) || EF.Functions.ILike(u.Username, registerWithGoogleRequest.Username));
         if (userWithSameEmailOrUserName != null)
         {
-            if (userWithSameEmailOrUserName.Email == payload.Email)
+            if (userWithSameEmailOrUserName.Email.ToLower() == payload.Email.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Email is already in use.");
 
-            if (userWithSameEmailOrUserName.Username == username)
+            if (userWithSameEmailOrUserName.Username.ToLower() == registerWithGoogleRequest.Username.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Username is already in use.");
 
             return Result<AuthenticationResponseDTO>.Error("Credentials already in use.");
@@ -188,10 +185,10 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         // Generate salt and hash
         string salt = Hashing.GenerateSalt();
-        string hash = Hashing.HashPassword(password, salt);
+        string hash = Hashing.HashPassword(registerWithGoogleRequest.Password, salt);
 
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences ?? new UserPreferences());
 
         // Save user
         await _dbContext.Users.AddAsync(user);
@@ -207,6 +204,10 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string accessToken = _tokenService.GenerateAccessToken(user);
 
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.Preferences);
+
+        // Send verification email
+        _ = await SendVerificationEmail(user.Id, verifyUrl);
+
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 

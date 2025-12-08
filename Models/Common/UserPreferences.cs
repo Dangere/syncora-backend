@@ -9,7 +9,7 @@ public class UserPreferences
 {
     // 1. Private backing fields (EF Core will interact with these)
     private bool? _isDarkMode;
-    private string? _language;
+    private dynamic? _language;
 
     // 2. Public properties with fallback logic
     public bool IsDarkMode
@@ -18,14 +18,21 @@ public class UserPreferences
         set => _isDarkMode = value;
     }
 
-    public string Language
+    public Language Language
     {
-        get => _language ?? "en"; // Fallback to "en" if null
+        get => _language ?? Language.English; // Fallback to 0 if null
         set => _language = value;
     }
 
     // Factory method to create a new UserPreferences instance with pre set values
     // TODO: Request the user input from the frontend on registering
-    public static UserPreferences WithUserInputs(bool isDarkMode, string language) => new() { IsDarkMode = isDarkMode, Language = language };
+    public static UserPreferences WithUserInputs(bool isDarkMode, Language language) => new() { IsDarkMode = isDarkMode, Language = language };
 
 }
+public enum Language
+{
+    English = 0,
+    Arabic = 1
+
+}
+
