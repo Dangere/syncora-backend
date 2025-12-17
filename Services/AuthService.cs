@@ -332,9 +332,9 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     }
 
     // Remember to use stricter rate limiting in controllers
-    public async Task<Result<string>> SendPasswordResetEmail(int userId, string passwordResetPageUrl)
+    public async Task<Result<string>> SendPasswordResetEmail(string email, string passwordResetPageUrl)
     {
-        UserEntity? user = await _dbContext.Users.FindAsync(userId);
+        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
         if (user == null)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 

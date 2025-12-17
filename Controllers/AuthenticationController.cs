@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace SyncoraBackend.Controllers;
 
@@ -150,10 +151,9 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
 
 
-    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("password-reset/send"), EnableRateLimiting("email-policy")]
-    public async Task<IActionResult> SendEmailPasswordReset()
+    [HttpPost("password-reset/send/{email}"), EnableRateLimiting("email-policy")]
+    public async Task<IActionResult> SendEmailPasswordReset([EmailAddress] string email)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
         string? passwordRestPageUrl = Url.Page(pageName: "/Auth/PasswordReset", values
         : null, pageHandler: null, protocol: Request.Scheme, host: Request.Host.ToString()
@@ -163,7 +163,7 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         if (passwordRestPageUrl == null)
             return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate password reset page URL" });
 
-        Result<string> emailResult = await _authService.SendPasswordResetEmail(userId, passwordRestPageUrl);
+        Result<string> emailResult = await _authService.SendPasswordResetEmail(email, passwordRestPageUrl);
 
         if (!emailResult.IsSuccess)
             return StatusCode(emailResult.ErrorStatusCode, emailResult.ErrorMessage);
