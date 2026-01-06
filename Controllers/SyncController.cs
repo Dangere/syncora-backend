@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Models.DTOs.Sync;
 using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
@@ -26,7 +27,7 @@ public class SyncController(ClientSyncService syncService) : ControllerBase
 
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<Dictionary<string, object>> dataResult = await _syncService.SyncSinceTimestamp(userId, formattedSince, includeDeleted);
+        Result<SyncPayload> dataResult = await _syncService.SyncSinceTimestamp(userId, formattedSince, includeDeleted);
 
         if (!dataResult.IsSuccess)
             return StatusCode(dataResult.ErrorStatusCode, dataResult.ErrorMessage);

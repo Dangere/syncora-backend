@@ -43,7 +43,7 @@ public class GroupEntity
     public GroupAccess GetGroupAccess(int userId)
     {
         bool isOwner = OwnerUserId == userId;
-        bool isShared = GroupMembers.Any(m => m.UserId == userId);
+        bool isShared = GroupMembers.Where(m => m.KickedAt == null).Any(m => m.UserId == userId);
         if (!isOwner && isShared)
         {
             return GroupAccess.Shared;
@@ -51,6 +51,15 @@ public class GroupEntity
         else if (!isOwner && !isShared)
             return GroupAccess.Denied;
         return GroupAccess.Owner;
+    }
+
+
+    public GroupEntity ExcludeKickedUsers()
+    {
+        GroupEntity group = this;
+        group.GroupMembers.RemoveWhere(m => m.KickedAt != null);
+        return group;
+
     }
 
 }

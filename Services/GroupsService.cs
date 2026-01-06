@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
 using SyncoraBackend.Hubs;
 using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Models.DTOs.Sync;
+using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
@@ -67,11 +69,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
     public async Task<Result<string>> UpdateGroup(UpdateGroupDTO updateGroupDTO, int userId, int groupId)
     {
-        // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
-
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         // Make sure the group exists
         if (groupEntity == null)
@@ -86,16 +84,26 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
-        return await UpdateGroupEntity(groupEntity, updateGroupDTO);
+
+
+        if (updateGroupDTO.Title == groupEntity.Title && updateGroupDTO.Description == groupEntity.Description)
+            return Result<string>.Error("Group details are the same.", 400);
+
+        groupEntity.Title = updateGroupDTO.Title ?? groupEntity.Title;
+        groupEntity.Description = updateGroupDTO.Description ?? groupEntity.Description;
+        groupEntity.LastModifiedDate = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity]));
+
+
+        return Result<string>.Success("Group updated.");
     }
 
     public async Task<Result<string>> DeleteGroup(int userId, int groupId)
     {
-        // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         // Make sure the group exists
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
@@ -112,18 +120,16 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
         groupEntity.DeletedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+        await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(DeletedGroupsIds: [groupEntity.Id]));
 
 
-        if (groupEntity.Tasks.Count == 0)
-            return Result<string>.Success("Group deleted.");
-        else
-            return Result<string>.Success("Group deleted along with all of its tasks.");
+        return Result<string>.Success("Group deleted.");
+
     }
 
     public async Task<Result<string>> AllowAccessToGroup(int groupId, int userId, string userNameToGrant, bool allowAccess)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).ThenInclude(m => m.User).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
@@ -150,7 +156,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         if (allowAccess == groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId && m.KickedAt == null))
             return Result<string>.Error($"The user has already been " + (allowAccess ? "granted" : "revoked") + " access.", 400);
 
-
+        List<TaskEntity> assignedTasks = [];
         if (allowAccess)
         {
             GroupMemberEntity? groupMember = groupEntity.GroupMembers.FirstOrDefault(m => m.UserId == userToGrant.Id && m.GroupId == groupId);
@@ -172,7 +178,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
             groupMember.KickedAt = DateTime.UtcNow;
 
 
-            var assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userToGrant)).ToListAsync();
+            assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userToGrant) && t.DeletedAt == null).ToListAsync();
 
             foreach (TaskEntity task in assignedTasks)
             {
@@ -188,35 +194,41 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
         await _dbContext.SaveChangesAsync();
 
+
+        // Pushing changes to the members
         if (allowAccess)
         {
+            //If we allowed access, we send the new user all the group data
+            List<UserEntity> usersData = groupEntity.GroupMembers.Where(m => m.KickedAt == null).Select(m => m.User).ToList();
+            usersData.Add(groupEntity.OwnerUser);
+
+            assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userToGrant) && t.DeletedAt == null).ToListAsync();
+
+            List<TaskEntity> tasksData = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.DeletedAt == null).ToListAsync();
+
+
+            // Sending the group + users + tasks to the user that was just added
+            await _clientSyncService.PushPayloadToPerson(userToGrant.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Users: usersData, Tasks: tasksData));
+
+            await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Users: [userToGrant]));
             await _clientSyncService.AddUserToHubGroup(userToGrant.Id, groupEntity.Id);
-            await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
         }
         else
         {
-            await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+            // Remove the user from the group hub
             await _clientSyncService.RemoveUserFromHubGroup(userToGrant.Id, groupEntity.Id);
+
+            // Sending a payload to the user that they have been removed
+            await _clientSyncService.PushPayloadToPerson(userToGrant.Id, SyncPayload.FromEntity(KickedGroupsIds: [groupEntity.Id]));
+
+            // Sending a payload to the entire group members without kicked users, and updated tasks without that user assigned
+            await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Tasks: assignedTasks));
+
         }
 
         return Result<string>.Success(allowAccess ? "Access granted." : "Access revoked.");
     }
 
-    private async Task<Result<string>> UpdateGroupEntity(GroupEntity groupEntity, UpdateGroupDTO updateGroupDTO)
-    {
-        if (updateGroupDTO.Title == groupEntity.Title && updateGroupDTO.Description == groupEntity.Description)
-            return Result<string>.Error("Group details are the same.", 400);
-
-        groupEntity.Title = updateGroupDTO.Title ?? groupEntity.Title;
-        groupEntity.Description = updateGroupDTO.Description ?? groupEntity.Description;
-        groupEntity.LastModifiedDate = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
-
-
-        return Result<string>.Success("Group updated.");
-    }
 
     public async Task<Result<string>> LeaveGroup(int groupId, int userId)
     {
@@ -245,7 +257,7 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
         groupEntity.LastModifiedDate = DateTime.UtcNow;
 
         // Getting the assigned tasks for that user
-        var assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userLeaving)).ToListAsync();
+        var assignedTasks = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.GroupId == groupId && t.AssignedTo.Contains(userLeaving) && t.DeletedAt == null).ToListAsync();
 
         // Removing the user from the assigned tasks
         foreach (TaskEntity task in assignedTasks)
@@ -259,7 +271,16 @@ public class GroupsService(IMapper mapper, SyncoraDbContext dbContext, ClientSyn
 
         // Saving the changes
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupEntity.Id);
+
+        // Removing the user from the hub group
+        await _clientSyncService.RemoveUserFromHubGroup(userId, groupEntity.Id);
+
+        // Sending a payload to the entire group members without kicked users, and updated tasks without that user assigned
+        await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Tasks: assignedTasks));
+
+        // Sending to the user leaving the group
+        await _clientSyncService.PushPayloadToPerson(userId, SyncPayload.FromEntity(DeletedGroupsIds: [groupEntity.Id]));
+
 
         return Result<string>.Success("User left group.");
 

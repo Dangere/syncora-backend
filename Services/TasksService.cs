@@ -4,6 +4,7 @@ using SyncoraBackend.Models.DTOs.Tasks;
 using SyncoraBackend.Data;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Utilities;
+using SyncoraBackend.Models.DTOs.Sync;
 
 namespace SyncoraBackend.Services;
 
@@ -17,7 +18,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     public async Task<Result<List<TaskDTO>>> GetTasks(int userId, int groupId, DateTime? sinceUtc = null)
     {
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks).Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks.Where(t => t.DeletedAt == null)).Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<List<TaskDTO>>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
@@ -46,11 +47,11 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     public async Task<Result<TaskDTO>> GetTask(int taskId, int userId, int groupId)
     {
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<TaskDTO>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Where(t => t.DeletedAt == null && t.Id == taskId).FirstOrDefaultAsync();
         if (taskEntity == null)
             return Result<TaskDTO>.Error("Task does not exist.", StatusCodes.Status404NotFound);
 
@@ -65,12 +66,13 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     public async Task<Result<string>> UpdateTask(int taskId, int groupId, int userId, UpdateTaskDetailsDTO updatedTaskDTO)
     {
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Where(t => t.DeletedAt == null && t.Id == taskId).FirstOrDefaultAsync();
+
 
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
@@ -86,17 +88,35 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Group does not exist.", StatusCodes.Status403Forbidden);
         }
 
-        return await UpdateTaskEntityDetails(taskEntity, updatedTaskDTO, userId);
+        taskEntity.Title = updatedTaskDTO.Title ?? taskEntity.Title;
+        taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
+
+        // if (updatedTaskDTO.Completed != null)
+        // {
+        //     // Im here realizing that this is not the best way to do this
+        //     // We are basically checking twice if the task is completed as a bool and as a user id when we can only use the user id
+        //     // taskEntity.Completed = updatedTaskDTO.Completed ?? taskEntity.Completed;
+        //     taskEntity.CompletedById = userId;
+        // }
+
+
+
+        if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
+            taskEntity.LastModifiedDate = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(Tasks: [taskEntity]));
+
+        return Result<string>.Success("Task updated.");
     }
 
     public async Task<Result<string>> DeleteTask(int taskId, int groupId, int userId)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
-
-        TaskEntity? taskEntity = await _dbContext.Tasks.FindAsync(taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Where(t => t.DeletedAt == null && t.Id == taskId).FirstOrDefaultAsync();
 
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
@@ -114,7 +134,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
         taskEntity.DeletedAt = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupId);
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(DeletedTasksIds: [taskId]));
 
         return Result<string>.Success("Task deleted.");
     }
@@ -122,13 +142,13 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     // Assigns a list of users to a task
     public async Task<Result<string>> AssignTaskTo(int taskId, int groupId, int userId, int[] userIdsToAssign)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
 
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
 
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
@@ -160,20 +180,20 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         taskEntity.LastModifiedDate = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupId);
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(Tasks: [taskEntity]));
 
         return Result<string>.Success("Users assigned.");
     }
     // Directly sets a list of users to be assigned to a task
     public async Task<Result<string>> SetAssignTaskToUsers(int taskId, int groupId, int userId, int[] assignedUsers)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
 
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
 
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
@@ -205,18 +225,19 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
 
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupId);
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(Tasks: [taskEntity]));
+
 
         return Result<string>.Success("Users set assigned.");
     }
 
     public async Task<Result<string>> MarkTaskForUser(int taskId, int groupId, int userId, bool isCompleted)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null && (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)));
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId);
+        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).SingleOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
 
         if (taskEntity == null)
             return Result<string>.Error("Task does not exist.", StatusCodes.Status404NotFound);
@@ -233,7 +254,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
 
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupId);
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(Tasks: [taskEntity]));
 
         return Result<string>.Success("Task marked.");
     }
@@ -260,32 +281,10 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
         await _dbContext.Tasks.AddAsync(createdTask);
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(groupId);
+        await _clientSyncService.PushPayloadToGroup(groupId, SyncPayload.FromEntity(Tasks: [createdTask]));
+
 
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(createdTask));
     }
 
-    private async Task<Result<string>> UpdateTaskEntityDetails(TaskEntity taskEntity, UpdateTaskDetailsDTO updatedTaskDTO, int? userId = null)
-    {
-        taskEntity.Title = updatedTaskDTO.Title ?? taskEntity.Title;
-        taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
-
-        // if (updatedTaskDTO.Completed != null)
-        // {
-        //     // Im here realizing that this is not the best way to do this
-        //     // We are basically checking twice if the task is completed as a bool and as a user id when we can only use the user id
-        //     // taskEntity.Completed = updatedTaskDTO.Completed ?? taskEntity.Completed;
-        //     taskEntity.CompletedById = userId;
-        // }
-
-
-
-        if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
-            taskEntity.LastModifiedDate = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-        await _clientSyncService.NotifyGroupMembersToSync(taskEntity.GroupId);
-
-        return Result<string>.Success("Task updated.");
-    }
 }

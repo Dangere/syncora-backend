@@ -363,7 +363,10 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string passwordResetTokenHash = Hashing.HashToken(passwordResetToken, null);
 
         // Verify token
-        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens.AsNoTracking().Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow).FirstOrDefaultAsync();
+        PasswordResetTokenEntity? tokenEntity = await _dbContext.PasswordResetTokens
+        .AsNoTracking()
+        .Where(t => t.HashedToken == passwordResetTokenHash && !t.IsConsumed && t.ExpiresAt > DateTime.UtcNow)
+        .FirstOrDefaultAsync();
 
         if (tokenEntity == null)
             return Result<string>.Error("Invalid password reset token. Expired or already consumed.", StatusCodes.Status400BadRequest);
@@ -398,7 +401,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             tokenEntity.IsConsumed = true;
 
             // Revoke refresh tokens to force user to log out from all sessions (they will become invalid anyway because we are updating the salt)
-            await _dbContext.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsRevoked, true));
+            await _dbContext.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsRevoked, true));
 
             // Update user password and salt
             user.Salt = salt;
