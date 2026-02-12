@@ -83,6 +83,17 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
         return Result<SyncPayload>.Success(payload);
     }
 
+
+    // This method is used to push event based updates to a list of groups
+    // While It automatically handles deduplication at the connection level
+    // So you don't have to worry about duplicate updates of clients
+    public async Task PushPayloadToGroups(HashSet<int> groupIds, SyncPayload payload)
+    {
+        Console.WriteLine("Sending sync payload to groups " + string.Join(", ", groupIds));
+        var groupNames = groupIds.Select(id => $"group-{id}").ToList();
+        await _hubContext.Clients.Groups(groupNames).SendAsync("ReceiveSync", payload);
+    }
+
     // This method is used to push event based updates to clients
     public async Task PushPayloadToGroup(int groupId, SyncPayload payload)
     {

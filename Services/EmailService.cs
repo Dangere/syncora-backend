@@ -9,9 +9,6 @@ public class EmailService(IConfiguration configuration)
 {
     private readonly IConfiguration _config = configuration;
 
-
-
-
     public async Task<Result<string>> SendVerificationEmail(string toUsername, string toEmail, string url)
     {
         // Validate URL

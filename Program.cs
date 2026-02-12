@@ -1,13 +1,17 @@
 using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SyncoraBackend.Data;
 using SyncoraBackend.Hubs;
+using SyncoraBackend.interfaces;
+using SyncoraBackend.Repositories;
 using SyncoraBackend.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +21,6 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddRazorPages();
 // Add controllers, Lifecycle: Transient but behaves like scoped because it gets created per HTTP request
 builder.Services.AddControllers();
-
 builder.Services.AddSignalR();
 
 // Add services, Lifecycle: Scoped
@@ -28,15 +31,24 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<ClientSyncService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<UsersService>();
+builder.Services.AddScoped<IImagesRepository>(provider => new CloudinaryImageRepository(provider.GetRequiredService<Cloudinary>()));
+builder.Services.AddScoped<ImagesService>();
+
+
 builder.Services.AddSingleton<InMemoryHubConnectionManager>();
 
 
 builder.Services.AddScoped<AdminServices>();
 
+// Configure Cloudinary for image upload
+builder.Services.AddSingleton(provider =>
+{
+    Cloudinary cloudinary = new(builder.Configuration.GetSection("CloudinarySettings")["URL"]);
+    cloudinary.Api.Secure = true;
+    return cloudinary;
+});
 
-// Add Hubs, Lifecycle: Singleton
-// builder.Services.AddSingleton<SyncHub>();
-// builder.Services.AddSingleton<NotificationHub>();
 
 // Adding a delegate to allow services to call the hub to sync, Lifecycle: Transient
 // builder.Services.AddTransient<Func<int, Task>>(provider => delegate (int groupId)
@@ -91,7 +103,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             // If the request is for our hub...
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrEmpty(accessToken) &&
-                (path.StartsWithSegments("/hubs/sync")))
+                path.StartsWithSegments("/hubs/sync"))
             {
                 // Read the token out of the query string
                 context.Token = accessToken;

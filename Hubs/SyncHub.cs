@@ -10,13 +10,14 @@ namespace SyncoraBackend.Hubs;
 public class SyncHub(GroupsService groupService, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
 {
     private readonly GroupsService _groupService = groupService;
+    private readonly InMemoryHubConnectionManager _inMemoryConnectionManager = inMemoryConnectionManager;
 
 
     public override async Task OnConnectedAsync()
     {
         int UserId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         Console.WriteLine($"A client has connected, UserId: {UserId}");
-        inMemoryConnectionManager.AddConnection(UserId, Context.ConnectionId);
+        _inMemoryConnectionManager.AddConnection(UserId, Context.ConnectionId);
 
         List<GroupDTO> groups = await _groupService.GetGroups(UserId);
 
