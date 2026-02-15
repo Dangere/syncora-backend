@@ -55,12 +55,12 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
                 Users = g.GroupMembers
                              // We select the users that newly joined or were newly modified or all of them if the group was modified
                              .Where(m => (m.JoinedAt > utcSince || m.User.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) && m.KickedAt == null)
-                             .Select(m => new UserDTO(m.User.Id, m.User.Email, m.User.Username, m.User.Role.ToString(), m.User.CreationDate, m.User.LastModifiedDate, m.User.ProfilePictureURL)),
+                             .Select(m => new UserDTO(m.User.Id, m.User.Email, m.User.Username, m.User.FirstName, m.User.LastName, m.User.Role.ToString(), m.User.CreationDate, m.User.LastModifiedDate, m.User.ProfilePictureURL)),
                 Tasks = g.Tasks
                              .Where(t => (t.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) && t.DeletedAt == null)
                              .Select(t => new TaskDTO(t.Id, t.Title, t.Description, t.CompletedById, t.AssignedTo.Select(m => m.Id).ToArray(), t.CreationDate, t.LastModifiedDate, t.GroupId)),//_mapper.Map<TaskDTO>(t, t.CreationDate, t.LastModifiedDate, t.GroupId)),
 
-                Owner = (g.OwnerUser.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) ? new UserDTO(g.OwnerUser.Id, g.OwnerUser.Email, g.OwnerUser.Username, g.OwnerUser.Role.ToString(), g.OwnerUser.CreationDate, g.OwnerUser.LastModifiedDate, g.OwnerUser.ProfilePictureURL) : null
+                Owner = (g.OwnerUser.LastModifiedDate > utcSince || g.LastModifiedDate > utcSince) ? new UserDTO(g.OwnerUser.Id, g.OwnerUser.Email, g.OwnerUser.Username, g.OwnerUser.FirstName, g.OwnerUser.LastName, g.OwnerUser.Role.ToString(), g.OwnerUser.CreationDate, g.OwnerUser.LastModifiedDate, g.OwnerUser.ProfilePictureURL) : null
             })
             .ToListAsync();
 

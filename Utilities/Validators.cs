@@ -23,6 +23,17 @@ public static class Validators
         return true;
     }
 
+    public static bool ValidateUsername(string username)
+    {
+        if (username.Length > 20 || username.Length < 2)
+            return false;
+
+
+        Regex regex = new(@"^[a-zA-Z0-9\s]*$");
+        Match match = regex.Match(username);
+        return match.Success;
+    }
+
     public static bool ValidateName(string name)
     {
         if (!(name.Length <= 10 && name.Length >= 2))
@@ -39,51 +50,6 @@ public static class Validators
         Match match = regex.Match(name);
 
         return match.Success;
-    }
-
-    public static bool ValidatePhone(string phone)
-    { //phone must be between 10 and 16 characters
-        if (phone.Length > 16 || phone.Length < 10)
-            return false;
-
-        Regex regex = new(@"\(?\d{3}\)?-? *\d{3}-? *-?\d{4}");
-        Match match = regex.Match(phone);
-        return match.Success;
-    }
-    public static bool ValidateBookTitle(string title)
-    {
-        // Trim whitespace and validate length
-        string trimmedTitle = title.Trim();
-        if (trimmedTitle.Length < 1 || trimmedTitle.Length > 100)
-            return false;
-
-        // Match allowed characters (letters, spaces, apostrophes, hyphens, commas, periods)
-        Regex regex = new Regex(@"^[A-Za-z\s.,'-]+$");
-        return regex.IsMatch(trimmedTitle);
-    }
-    public static bool ValidateBookAuthor(string author)
-    {
-        // Trim whitespace and validate length
-        string trimmedAuthor = author.Trim();
-        if (trimmedAuthor.Length < 2 || trimmedAuthor.Length > 50)
-            return false;
-
-        // Split into parts (e.g., first name, last name)
-        string[] nameParts = trimmedAuthor.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-        // Require at least one valid name part (e.g., "F. Scott Fitzgerald" has 3 parts)
-        if (nameParts.Length < 1)
-            return false;
-
-        // Match allowed characters for each part (no standalone invalid symbols)
-        Regex regex = new Regex(@"^[A-Za-z.,'-]+$");
-        foreach (string part in nameParts)
-        {
-            if (!regex.IsMatch(part))
-                return false;
-        }
-
-        return true;
     }
 
 }

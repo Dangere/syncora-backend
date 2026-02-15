@@ -15,6 +15,10 @@ public class UserEntity
     [Required]
     public required string Username { get; set; }
     [Required]
+    public required string FirstName { get; set; }
+    [Required]
+    public required string LastName { get; set; }
+    [Required]
     public required string Hash { get; set; }
     [Required]
     public required string Salt { get; set; }
@@ -57,8 +61,8 @@ public class UserEntity
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase
     /// </summary>
-    public static UserEntity CreateUser(string email, string username, string hash, string salt, UserRole role, bool isVerified, UserPreferences userPreferences)
-        => new() { Preferences = userPreferences, Email = email.ToLower(), Username = username.ToLower(), Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
+    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferences userPreferences)
+        => new() { Preferences = userPreferences, Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
 
 
 

@@ -72,6 +72,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
         }
 
+        if (!Validators.ValidateUsername(registerRequest.Username))
+        {
+            return Result<AuthenticationResponseDTO>.Error("Username is not in valid format.");
+        }
+
         // Validate availability of email and username
         UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, registerRequest.Email) || EF.Functions.ILike(u.Username, registerRequest.Username));
         if (userWithSameEmailOrUserName != null)
@@ -89,7 +94,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string passwordHash = Hashing.HashPassword(registerRequest.Password, salt);
 
         // Create user without verified email
-        UserEntity user = UserEntity.CreateUser(email: registerRequest.Email, username: registerRequest.Username, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: registerRequest.UserPreferences ?? new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: registerRequest.Email, username: registerRequest.Username, firstName: registerRequest.FirstName, lastName: registerRequest.LastName, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: registerRequest.UserPreferences ?? new UserPreferences());
 
 
         // Save user
@@ -154,6 +159,17 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
     public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest, string verifyUrl)
     {
+        if (!Validators.ValidatePassword(registerWithGoogleRequest.Password))
+        {
+            return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
+        }
+
+        if (!Validators.ValidateUsername(registerWithGoogleRequest.Username))
+        {
+            return Result<AuthenticationResponseDTO>.Error("Username is not in valid format.");
+        }
+
+
         var jwtValidation = _config.GetSection("GoogleJWTValidation");
         var validationSettings = new GoogleJsonWebSignature.ValidationSettings
         {
@@ -190,8 +206,15 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string salt = Hashing.GenerateSalt();
         string hash = Hashing.HashPassword(registerWithGoogleRequest.Password, salt);
 
+        // First and last name
+        string firstName = payload.GivenName.Split(' ')[0];
+        string lastName = payload.FamilyName.Split(' ')[0];
+
+        if (firstName.Length == 0 || lastName.Length == 0)
+            return Result<AuthenticationResponseDTO>.Error("Invalid google name.");
+
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences ?? new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, firstName: firstName, lastName: lastName, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences ?? new UserPreferences());
 
         // Save user
         await _dbContext.Users.AddAsync(user);
