@@ -77,14 +77,19 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<AuthenticationResponseDTO>.Error("Username is not in valid format.");
         }
 
-        // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, registerRequest.Email) || EF.Functions.ILike(u.Username, registerRequest.Username));
-        if (userWithSameEmailOrUserName != null)
+        if (!Validators.ValidateName(registerRequest.FirstName) || !Validators.ValidateName(registerRequest.LastName))
         {
-            if (userWithSameEmailOrUserName.Email.ToLower() == registerRequest.Email.ToLower())
+            return Result<AuthenticationResponseDTO>.Error("First name or last name is not in valid format.");
+        }
+
+        // Validate availability of email and username
+        UserEntity? userWithSameEmailOrUsername = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, registerRequest.Email) || EF.Functions.ILike(u.Username, registerRequest.Username));
+        if (userWithSameEmailOrUsername != null)
+        {
+            if (userWithSameEmailOrUsername.Email.ToLower() == registerRequest.Email.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Email is already in use.", StatusCodes.Status409Conflict);
 
-            if (userWithSameEmailOrUserName.Username.ToLower() == registerRequest.Username.ToLower())
+            if (userWithSameEmailOrUsername.Username.ToLower() == registerRequest.Username.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Username is already in use.", StatusCodes.Status409Conflict);
             return Result<AuthenticationResponseDTO>.Error("Credentials already in use.");
         }
@@ -189,13 +194,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         // TODO: Make sure to provide a way for a user to restore their account if someone already took it or they created it using manual registration
         // Validate availability of email and username
-        UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, payload.Email) || EF.Functions.ILike(u.Username, registerWithGoogleRequest.Username));
-        if (userWithSameEmailOrUserName != null)
+        UserEntity? userWithSameEmailOrUsername = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, payload.Email) || EF.Functions.ILike(u.Username, registerWithGoogleRequest.Username));
+        if (userWithSameEmailOrUsername != null)
         {
-            if (userWithSameEmailOrUserName.Email.ToLower() == payload.Email.ToLower())
+            if (userWithSameEmailOrUsername.Email.ToLower() == payload.Email.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Email is already in use.");
 
-            if (userWithSameEmailOrUserName.Username.ToLower() == registerWithGoogleRequest.Username.ToLower())
+            if (userWithSameEmailOrUsername.Username.ToLower() == registerWithGoogleRequest.Username.ToLower())
                 return Result<AuthenticationResponseDTO>.Error("Username is already in use.");
 
             return Result<AuthenticationResponseDTO>.Error("Credentials already in use.");

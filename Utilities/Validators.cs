@@ -52,4 +52,24 @@ public static class Validators
         return match.Success;
     }
 
+    public static bool ValidateTitle(string title)
+    {
+        if (title.Length > 50 || title.Length < 2)
+            return false;
+
+        Regex regex = new(@"^[a-zA-Z0-9\s]*$");
+        Match match = regex.Match(title);
+        return match.Success;
+    }
+
+    public static bool ValidateDescription(string description)
+    {
+        if (description.Length > 200 || description.Length < 2)
+            return false;
+
+        Regex regex = new(@"^[a-zA-Z0-9\s]*$");
+        Match match = regex.Match(description);
+        return match.Success;
+    }
+
 }

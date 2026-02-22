@@ -6,7 +6,7 @@ public record UpdateGroupDTO(string? Title, string? Description) : IValidatableO
 {
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Title == null && Description == null)
+        if (string.IsNullOrEmpty(Title) && string.IsNullOrEmpty(Description))
             yield return new ValidationResult("At least one field must be updated",
                 [nameof(Title), nameof(Description)]);
     }

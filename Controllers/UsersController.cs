@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.Common;
+using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
@@ -30,11 +31,10 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
 
 
         return Ok(result.Data!);
-        // var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
 
     [HttpPost("images/profile/upload")]
-    public async Task<IActionResult> UploadProfileImage([FromBody] string imageUrl)
+    public async Task<IActionResult> UpdateProfileImage([FromBody] string imageUrl)
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -45,27 +45,21 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
 
 
         return Ok(result.Data!);
-        // var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     }
 
 
+    [HttpPost("profile")]
+    public async Task<IActionResult> UpdateProfileProfile([FromBody] UpdateUserProfileDTO updateUserProfileDTO)
+    {
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    // [HttpPost("images/upload")]
-    // public async Task<IActionResult> UploadImage(IFormFile file)
-    // {
-    //     // int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        Result<string> result = await _usersService.UpdateUserProfile(updateUserProfileDTO, userId);
 
-    //     Result<string> result = await _imagesService.AddPhotoAsync(file);
-
-    //     if (!result.IsSuccess)
-    //         return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
-
-
-    //     return Ok(result.Data!);
-    //     // var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
 
 
-    // }
-
+        return Ok(result.Data!);
+    }
 
 }
