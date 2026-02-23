@@ -79,8 +79,12 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
             {
                 return Result<string>.Error("Username is already in use.", StatusCodes.Status409Conflict);
             }
+
+            user.Username = updateUserProfileDTO.Username;
         }
         user.LastModifiedDate = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
 
 
         HashSet<int> userGroupIds = user.OwnedGroups.Select(g => g.Id).Union(user.GroupMemberships.Select(m => m.GroupId)).ToHashSet();
