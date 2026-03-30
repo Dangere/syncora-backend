@@ -24,7 +24,7 @@ public class GroupMemberEntity
 
     public override bool Equals(object? obj)
     {
-        return obj is GroupMemberEntity other && Id == other.Id;
+        return obj is GroupMemberEntity other && Id == other.Id && GroupId == other.GroupId && UserId == other.UserId;
     }
 
     public override int GetHashCode()

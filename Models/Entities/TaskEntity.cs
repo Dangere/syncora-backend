@@ -32,7 +32,7 @@ public class TaskEntity
 
     public override bool Equals(object? obj)
     {
-        return obj is TaskEntity other && Id == other.Id;
+        return obj is TaskEntity other && Id == other.Id && Title == other.Title && Description == other.Description;
     }
 
     public override int GetHashCode()

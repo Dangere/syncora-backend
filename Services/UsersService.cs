@@ -17,6 +17,15 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
     private readonly IMapper _mapper = mapper;
 
 
+    public async Task<Result<UserDTO>> GetUser(string username)
+    {
+        UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, username));
+
+        if (user == null)
+            return Result<UserDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
+
+        return new Result<UserDTO>(_mapper.Map<UserDTO>(user));
+    }
 
     public async Task<Result<string>> UpdateUserProfilePicture(int userId, string imageUrl)
     {

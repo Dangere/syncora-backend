@@ -71,7 +71,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Group does not exist.", StatusCodes.Status404NotFound);
 
 
-        TaskEntity? taskEntity = await _dbContext.Tasks.Where(t => t.DeletedAt == null && t.Id == taskId).FirstOrDefaultAsync();
+        TaskEntity? taskEntity = await _dbContext.Tasks.Include(t => t.AssignedTo).Where(t => t.DeletedAt == null && t.Id == taskId).FirstOrDefaultAsync();
 
 
         if (taskEntity == null)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
@@ -79,30 +80,31 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{groupId}/grant-access/{userName}")]
-    public async Task<IActionResult> GrantAccessToGroup(int groupId, string userName)
+    [HttpPost("{groupId}/grant-access")]
+    public async Task<IActionResult> GrantAccessToGroup(int groupId, List<string> usernames)
     {
-        int requestUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> grantResult = await _groupService.AllowAccessToGroup(groupId, requestUserId, userName, true);
+        Result<string> grantResult = await _groupService.GrantAccessToGroup(groupId, userId, usernames);
 
         if (!grantResult.IsSuccess)
             return StatusCode(grantResult.ErrorStatusCode, grantResult.ErrorMessage);
 
-        return NoContent();
+        return Ok(grantResult.Data);
     }
 
-    [HttpPost("{groupId}/revoke-access/{userName}")]
-    public async Task<IActionResult> RevokeAccessToGroup(int groupId, string userName)
+    [HttpPost("{groupId}/revoke-access")]
+    public async Task<IActionResult> RevokeAccessToGroup(int groupId, List<string> usernames)
     {
-        int requestUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> revokeResult = await _groupService.AllowAccessToGroup(groupId, requestUserId, userName, false);
+        Result<string> revokeResult = await _groupService.RevokeAccessToGroup(groupId, userId, usernames);
 
         if (!revokeResult.IsSuccess)
             return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
 
-        return NoContent();
+        return Ok(revokeResult.Data);
+
     }
 
 

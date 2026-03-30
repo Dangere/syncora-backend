@@ -14,10 +14,11 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, InMemoryHubConnectionManager connectionManager)
+public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, ILogger<ClientSyncService> logger, InMemoryHubConnectionManager connectionManager)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly IHubContext<SyncHub> _hubContext = hubContext;
+    private readonly ILogger<ClientSyncService> _logger = logger;
 
     private readonly InMemoryHubConnectionManager _connectionManager = connectionManager;
 
@@ -85,11 +86,11 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
 
 
     // This method is used to push event based updates to a list of groups
-    // While It automatically handles deduplication at the connection level
-    // So you don't have to worry about duplicate updates of clients
+    // While handling deduplication of connection IDs
     public async Task PushPayloadToGroups(HashSet<int> groupIds, SyncPayload payload)
     {
-        Console.WriteLine("Sending sync payload to groups " + string.Join(", ", groupIds));
+        var groupsList = string.Join(", ", groupIds);
+        _logger.LogInformation("Sending sync payload to groups {groupsList}", groupsList);
         var groupNames = groupIds.Select(id => $"group-{id}").ToList();
         await _hubContext.Clients.Groups(groupNames).SendAsync("ReceiveSync", payload);
     }
@@ -97,7 +98,7 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     // This method is used to push event based updates to clients
     public async Task PushPayloadToGroup(int groupId, SyncPayload payload)
     {
-        Console.WriteLine("Sending sync payload");
+        _logger.LogInformation("Sending sync payload");
         await _hubContext.Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync", payload);
     }
 
@@ -105,7 +106,7 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     public async Task PushPayloadToPerson(int userId, SyncPayload payload)
     {
 
-        Console.WriteLine("Sending individual sync payload");
+        _logger.LogInformation("Sending individual sync payload");
 
         await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceiveSync", payload);
 
@@ -114,7 +115,7 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     // This method is used to notify a user that their account has been verified
     public async Task NotifyUserVerification(int userId)
     {
-        Console.WriteLine("Sending verification update");
+        _logger.LogInformation("Sending verification update");
         await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceiveVerification", true);
     }
 

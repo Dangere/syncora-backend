@@ -19,6 +19,19 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
     private readonly UsersService _usersService = usersService;
     private readonly ImagesService _imagesService = imagesService;
 
+    [HttpGet("{username}")]
+    public async Task<IActionResult> GetUser(string username)
+    {
+        Result<UserDTO> result = await _usersService.GetUser(username);
+
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
+
+
+        return Ok(result.Data!);
+    }
+
+
     [HttpGet("images/generate-signature")]
     public async Task<IActionResult> GetImageUploadSignature()
     {

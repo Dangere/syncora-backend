@@ -68,7 +68,7 @@ public class UserEntity
 
     public override bool Equals(object? obj)
     {
-        return obj is UserEntity other && Id == other.Id;
+        return obj is UserEntity other && Id == other.Id && Email == other.Email && Username == other.Username;
     }
 
     public override int GetHashCode()
