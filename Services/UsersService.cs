@@ -9,11 +9,12 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class UsersService(ImagesService imagesService, ClientSyncService clientSyncService, SyncoraDbContext dbContext, IMapper mapper)
+public class UsersService(ImagesService imagesService, ClientSyncService clientSyncService, SyncoraDbContext dbContext, ILogger<UsersService> logger, IMapper mapper)
 {
     private readonly ImagesService _imagesService = imagesService;
     private readonly ClientSyncService _clientSyncService = clientSyncService;
     private readonly SyncoraDbContext _dbContext = dbContext;
+    private readonly ILogger<UsersService> _logger = logger;
     private readonly IMapper _mapper = mapper;
 
 
@@ -43,11 +44,9 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         user.LastModifiedDate = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
 
-        HashSet<int> userGroupIds = user.OwnedGroups.Select(g => g.Id).Union(user.GroupMemberships.Select(m => m.GroupId)).ToHashSet();
-
 
         // TODO: Notify users
-        await _clientSyncService.PushPayloadToGroups(userGroupIds, SyncPayload.FromEntity(Users: [user]));
+        await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
 
 
         return Result<string>.Success("Profile picture updated.");
@@ -96,12 +95,32 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         await _dbContext.SaveChangesAsync();
 
 
-        HashSet<int> userGroupIds = user.OwnedGroups.Select(g => g.Id).Union(user.GroupMemberships.Select(m => m.GroupId)).ToHashSet();
-
-
         // TODO: Notify users
-        await _clientSyncService.PushPayloadToGroups(userGroupIds, SyncPayload.FromEntity(Users: [user]));
+        await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
         return Result<string>.Success("Profile updated.");
 
+    }
+
+    // Returns a list of user ids related (in a group with the user) to the user
+    public async Task<List<int>> GetRelatedUserIds(int userId)
+    {
+        // Returns users that share a group with a user 
+        // Such as, users who own a group and the user is a member
+        // And, users who are a member of a group and the user is a member
+        // And, users who are a member of a group and the user is the owner
+
+        var rawRelatedUserIds = await _dbContext.Groups.Include(g => g.GroupMembers)
+            .Where(g => (g.OwnerUserId == userId ||
+                        g.GroupMembers.Any(m => m.UserId == userId)) && g.DeletedAt == null)
+            .Select(g => new { g.OwnerUserId, g.GroupMembers })
+            .ToListAsync();
+
+        var relatedUserIds = new HashSet<int>(rawRelatedUserIds.SelectMany(g => new int[] { g.OwnerUserId }.Union(g.GroupMembers.Select(m => m.UserId))));
+
+        relatedUserIds.Remove(userId);
+
+
+        _logger.LogInformation("Related user ids: {RelatedUserIds}", relatedUserIds);
+        return [.. relatedUserIds];
     }
 }

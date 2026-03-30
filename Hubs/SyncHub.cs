@@ -7,25 +7,39 @@ using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
 [AuthorizeRoles(UserRole.User, UserRole.Admin)]
-public class SyncHub(GroupsService groupService, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
+public class SyncHub(GroupsService groupService, UsersService usersService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
 {
     private readonly GroupsService _groupService = groupService;
+    private readonly UsersService _usersService = usersService;
+
+    private readonly ILogger<SyncHub> _logger = logger;
     private readonly InMemoryHubConnectionManager _inMemoryConnectionManager = inMemoryConnectionManager;
 
 
     public override async Task OnConnectedAsync()
     {
-        int UserId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        Console.WriteLine($"A client has connected, UserId: {UserId}");
-        _inMemoryConnectionManager.AddConnection(UserId, Context.ConnectionId);
+        int userId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        _logger.LogInformation("A client has connected, UserId: {UserId}", userId);
+        _inMemoryConnectionManager.AddConnection(userId, Context.ConnectionId);
 
-        List<GroupDTO> groups = await _groupService.GetGroups(UserId);
+        // Get the groups the user is in
+        List<GroupDTO> groups = await _groupService.GetGroups(userId);
 
+        // Create / Add the user to the groups
         foreach (GroupDTO group in groups)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
         }
-        Console.WriteLine("generated connection id is " + Context.ConnectionId);
+
+        // Get the related user ids 
+        List<int> relatedUserIds = await _usersService.GetRelatedUserIds(userId);
+
+        // Create / Join the related users groups
+        foreach (int relatedUserId in relatedUserIds)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{relatedUserId}");
+        }
+
 
         await base.OnConnectedAsync();
     }

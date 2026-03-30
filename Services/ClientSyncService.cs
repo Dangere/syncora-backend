@@ -85,14 +85,15 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     }
 
 
-    // This method is used to push event based updates to a list of groups
+    // This method is used to push event based updates to all users related to a userId
+    // For example, its used when a user updates their profile and wants to notify other users in other groups
     // While handling deduplication of connection IDs
-    public async Task PushPayloadToGroups(HashSet<int> groupIds, SyncPayload payload)
+    public async Task PushPayloadToRelatedUsers(int userId, SyncPayload payload)
     {
-        var groupsList = string.Join(", ", groupIds);
-        _logger.LogInformation("Sending sync payload to groups {groupsList}", groupsList);
-        var groupNames = groupIds.Select(id => $"group-{id}").ToList();
-        await _hubContext.Clients.Groups(groupNames).SendAsync("ReceiveSync", payload);
+        _logger.LogInformation("Sending sync payload to related users");
+
+        // Group of the user that contains other connection ids
+        await _hubContext.Clients.Groups($"user-{userId}").SendAsync("ReceiveSync", payload);
     }
 
     // This method is used to push event based updates to clients
