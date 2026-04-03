@@ -55,7 +55,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -99,7 +99,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string passwordHash = Hashing.HashPassword(registerRequest.Password, salt);
 
         // Create user without verified email
-        UserEntity user = UserEntity.CreateUser(email: registerRequest.Email, username: registerRequest.Username, firstName: registerRequest.FirstName, lastName: registerRequest.LastName, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: registerRequest.UserPreferences ?? new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: registerRequest.Email, username: registerRequest.Username, firstName: registerRequest.FirstName, lastName: registerRequest.LastName, hash: passwordHash, salt: salt, role: UserRole.User, isVerified: false, userPreferences: registerRequest.UserPreferences);
 
 
         // Save user
@@ -114,7 +114,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
 
         // Send verification email
         _ = await SendVerificationEmail(user.Id, verifyUrl);
@@ -158,7 +158,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
@@ -219,7 +219,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<AuthenticationResponseDTO>.Error("Invalid google name.");
 
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, firstName: firstName, lastName: lastName, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences ?? new UserPreferences());
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, firstName: firstName, lastName: lastName, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences);
 
         // Save user
         await _dbContext.Users.AddAsync(user);
@@ -234,7 +234,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         // Generate access token
         string accessToken = _tokenService.GenerateAccessToken(user);
 
-        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, user.Preferences);
+        AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
 
         // Send verification email
         _ = await SendVerificationEmail(user.Id, verifyUrl);

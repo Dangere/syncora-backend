@@ -17,6 +17,7 @@ public class MappingProfile : Profile
         CreateMap<GroupEntity, GroupDTO>().ForMember(dest => dest.GroupMembers, opt => opt.MapFrom(src => src.GroupMembers.Select(m => m.UserId)));
         CreateMap<GroupMemberEntity, int>().ConvertUsing(m => m.UserId);
 
+        CreateMap<UserPreferences, UserPreferencesDTO>();
 
 
         // Configure the mapping from UserEntity to UserDTO and vice versa

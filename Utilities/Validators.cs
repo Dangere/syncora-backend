@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 namespace SyncoraBackend.Utilities;
 
@@ -70,6 +71,20 @@ public static class Validators
         Regex regex = new(@"^[a-zA-Z0-9\s]*$");
         Match match = regex.Match(description);
         return match.Success;
+    }
+
+    public static bool ValidateLanguageCode(string code)
+    {
+        try
+        {
+            // This will throw a CultureNotFoundException if the code is invalid
+            var culture = CultureInfo.GetCultureInfo(code);
+            return true;
+        }
+        catch (CultureNotFoundException)
+        {
+            return false;
+        }
     }
 
 }

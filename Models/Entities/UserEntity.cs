@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.Common;
+using SyncoraBackend.Models.DTOs.Users;
 
 namespace SyncoraBackend.Models.Entities;
 
@@ -61,8 +62,8 @@ public class UserEntity
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase
     /// </summary>
-    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferences userPreferences)
-        => new() { Preferences = userPreferences, Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
+    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferencesDTO? userPreferences)
+        => new() { Preferences = new UserPreferences().UpdateFromDTO(userPreferences), Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
 
 
 

@@ -45,7 +45,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         await _dbContext.SaveChangesAsync();
 
 
-        // TODO: Notify users
+        //  Notify users
         await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
 
 
@@ -58,29 +58,14 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         if (user == null)
             return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
 
-        if (updateUserProfileDTO.FirstName != null)
-            if (!Validators.ValidateName(updateUserProfileDTO.FirstName))
-            {
-                return Result<string>.Error("First name is not in valid format.");
-            }
-
-        if (updateUserProfileDTO.LastName != null)
-            if (!Validators.ValidateName(updateUserProfileDTO.LastName))
-            {
-                return Result<string>.Error("Last name is not in valid format.");
-            }
-
         user.FirstName = updateUserProfileDTO.FirstName ?? user.FirstName;
         user.LastName = updateUserProfileDTO.LastName ?? user.LastName;
-        user.Preferences = updateUserProfileDTO.Preferences ?? user.Preferences;
+
+        if (updateUserProfileDTO.Preferences != null)
+            user.Preferences = user.Preferences.UpdateFromDTO(updateUserProfileDTO.Preferences);
 
         if (updateUserProfileDTO.Username != null)
         {
-
-            if (!Validators.ValidateUsername(updateUserProfileDTO.Username))
-            {
-                return Result<string>.Error("Username is not in valid format.");
-            }
 
             UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, updateUserProfileDTO.Username));
             if (userWithSameEmailOrUserName != null)
@@ -95,13 +80,18 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         await _dbContext.SaveChangesAsync();
 
 
-        // TODO: Notify users
-        await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
+        // Notify users
+        if (!updateUserProfileDTO.IsUpdatingPreferencesOnly)
+            await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
         return Result<string>.Success("Profile updated.");
 
     }
 
-    // Returns a list of user ids related (in a group with the user) to the user
+    /// <summary>
+    /// Returns a list of user ids related (in a group with the user) to the user
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <returns></returns>
     public async Task<List<int>> GetRelatedUserIds(int userId)
     {
         // Returns users that share a group with a user 
