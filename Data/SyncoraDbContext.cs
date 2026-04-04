@@ -28,7 +28,7 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         modelBuilder.Entity<TaskEntity>().HasOne(t => t.Group).WithMany(tg => tg.Tasks).HasForeignKey(t => t.GroupId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<TaskEntity>().HasMany(t => t.AssignedTo).WithMany(u => u.AssignedTasks);
-        modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany(u => u.CompletedTasks).HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany(u => u.CompletedTasks).HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.SetNull);
 
         // modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany().HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.Cascade);
 

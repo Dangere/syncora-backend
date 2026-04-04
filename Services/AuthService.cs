@@ -162,18 +162,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest, string verifyUrl)
+    public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest)
     {
-        if (!Validators.ValidatePassword(registerWithGoogleRequest.Password))
-        {
-            return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
-        }
-
-        if (!Validators.ValidateUsername(registerWithGoogleRequest.Username))
-        {
-            return Result<AuthenticationResponseDTO>.Error("Username is not in valid format.");
-        }
-
 
         var jwtValidation = _config.GetSection("GoogleJWTValidation");
         var validationSettings = new GoogleJsonWebSignature.ValidationSettings
@@ -211,15 +201,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         string salt = Hashing.GenerateSalt();
         string hash = Hashing.HashPassword(registerWithGoogleRequest.Password, salt);
 
-        // First and last name
-        string firstName = payload.GivenName.Split(' ')[0];
-        string lastName = payload.FamilyName.Split(' ')[0];
-
-        if (firstName.Length == 0 || lastName.Length == 0)
-            return Result<AuthenticationResponseDTO>.Error("Invalid google name.");
-
         // Create user with verified email
-        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, firstName: firstName, lastName: lastName, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences);
+        UserEntity user = UserEntity.CreateUser(email: payload.Email, username: registerWithGoogleRequest.Username, firstName: registerWithGoogleRequest.FirstName, lastName: registerWithGoogleRequest.LastName, hash: hash, salt: salt, role: UserRole.User, isVerified: true, userPreferences: registerWithGoogleRequest.UserPreferences, profilePictureURL: payload.Picture);
 
         // Save user
         await _dbContext.Users.AddAsync(user);
@@ -236,8 +219,6 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
 
-        // Send verification email
-        _ = await SendVerificationEmail(user.Id, verifyUrl);
 
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }

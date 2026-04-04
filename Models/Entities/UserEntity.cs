@@ -62,8 +62,8 @@ public class UserEntity
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase
     /// </summary>
-    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferencesDTO? userPreferences)
-        => new() { Preferences = new UserPreferences().UpdateFromDTO(userPreferences), Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified };
+    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferencesDTO? userPreferences, string? profilePictureURL = null)
+        => new() { Preferences = new UserPreferences().UpdateFromDTO(userPreferences), Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified, ProfilePictureURL = String.IsNullOrEmpty(profilePictureURL) ? null : profilePictureURL };
 
 
 
