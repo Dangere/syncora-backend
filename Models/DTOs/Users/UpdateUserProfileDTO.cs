@@ -14,22 +14,21 @@ public record UpdateUserProfileDTO(string? Username, string? FirstName, string? 
             yield return new ValidationResult("At least one field must be updated", [nameof(Username), nameof(FirstName), nameof(LastName), nameof(Preferences)]);
 
 
-        if (FirstName != null && !Validators.ValidateName(FirstName))
+        if (!string.IsNullOrEmpty(FirstName) && !Validators.ValidateName(FirstName))
         {
             yield return new ValidationResult("First name is not in valid format.", [nameof(FirstName)]);
 
         }
-        if (LastName != null && !Validators.ValidateName(LastName))
+        if (!string.IsNullOrEmpty(LastName) && !Validators.ValidateName(LastName))
         {
             yield return new ValidationResult("Last name is not in valid format.", [nameof(LastName)]);
         }
 
-        if (Username != null)
+        if (!string.IsNullOrEmpty(Username) && !Validators.ValidateUsername(Username))
         {
-            if (!Validators.ValidateUsername(Username))
-            {
-                yield return new ValidationResult("Username is not in valid format.", [nameof(Username)]); ;
-            }
+
+            yield return new ValidationResult("Username is not in valid format.", [nameof(Username)]); ;
+
         }
     }
 };

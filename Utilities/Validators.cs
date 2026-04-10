@@ -7,6 +7,8 @@ public static class Validators
 
     public static bool ValidateEmail(string email)
     {
+        if (string.IsNullOrEmpty(email))
+            return false;
         if (email.Length > 30)
             return false;
 
@@ -17,6 +19,8 @@ public static class Validators
     }
     public static bool ValidatePassword(string password)
     {
+        if (string.IsNullOrEmpty(password))
+            return false;
         //password must be between 6 and 16 characters
         if (password.Length > 32 || password.Length < 6)
             return false;
@@ -37,42 +41,24 @@ public static class Validators
 
     public static bool ValidateName(string name)
     {
-        if (!(name.Length <= 10 && name.Length >= 2))
+        if (string.IsNullOrEmpty(name))
             return false;
-
-
-        string[] namesArray = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (namesArray.Length != 1)
-        {
-            return false;
-        }
-
-        Regex regex = new(@"[A-Za-z., '-]+");
-        Match match = regex.Match(name);
-
-        return match.Success;
+        return Regex.IsMatch(name, @"^[^';<>\s\\]{1,20}$");
     }
 
     public static bool ValidateTitle(string title)
     {
-        if (title.Length > 50 || title.Length < 2)
+        if (string.IsNullOrEmpty(title))
             return false;
-
-        Regex regex = new(@"^[a-zA-Z0-9\s]*$");
-        Match match = regex.Match(title);
-        return match.Success;
+        return Regex.IsMatch(title, @"^\S[^';<>\\]{1,108}\S$|^\S{3,110}$");
     }
 
     public static bool ValidateDescription(string description)
     {
-        if (description.Length > 200 || description.Length < 2)
+        if (string.IsNullOrEmpty(description))
             return false;
-
-        Regex regex = new(@"^[a-zA-Z0-9\s]*$");
-        Match match = regex.Match(description);
-        return match.Success;
+        return Regex.IsMatch(description, @"^\S[^';<>\\]{4,253}\S$|^\S{6,255}$");
     }
-
     public static bool ValidateLanguageCode(string code)
     {
         try

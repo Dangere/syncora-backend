@@ -61,27 +61,6 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
     public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(RegisterRequestDTO registerRequest, string verifyUrl)
     {
-        // Validate email's and password's formats
-        if (!Validators.ValidateEmail(registerRequest.Email))
-        {
-            return Result<AuthenticationResponseDTO>.Error("Email is not in valid format.");
-
-        }
-        if (!Validators.ValidatePassword(registerRequest.Password))
-        {
-            return Result<AuthenticationResponseDTO>.Error("Password is not in valid format.");
-        }
-
-        if (!Validators.ValidateUsername(registerRequest.Username))
-        {
-            return Result<AuthenticationResponseDTO>.Error("Username is not in valid format.");
-        }
-
-        if (!Validators.ValidateName(registerRequest.FirstName) || !Validators.ValidateName(registerRequest.LastName))
-        {
-            return Result<AuthenticationResponseDTO>.Error("First name or last name is not in valid format.");
-        }
-
         // Validate availability of email and username
         UserEntity? userWithSameEmailOrUsername = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, registerRequest.Email) || EF.Functions.ILike(u.Username, registerRequest.Username));
         if (userWithSameEmailOrUsername != null)

@@ -85,14 +85,6 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         else if (!isOwner && !isShared)
             return Result<string>.Error("User has no access to this group.", StatusCodes.Status403Forbidden);
 
-        if (updateGroupDTO.Title != null)
-            if (!Validators.ValidateTitle(updateGroupDTO.Title))
-                return Result<string>.Error("Title is invalid.", StatusCodes.Status400BadRequest);
-
-        if (updateGroupDTO.Description != null)
-            if (!Validators.ValidateTitle(updateGroupDTO.Description))
-                return Result<string>.Error("Description is invalid.", StatusCodes.Status400BadRequest);
-
 
         if (updateGroupDTO.Title == groupEntity.Title && updateGroupDTO.Description == groupEntity.Description)
             return Result<string>.Error("Group details are the same.", 400);
