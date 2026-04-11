@@ -1,5 +1,6 @@
 namespace SyncoraBackend.Enums;
-public enum UserRole
+
+public enum UserRoles
 {
     User,
     Admin

@@ -8,7 +8,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.User, UserRole.Admin)]
+[AuthorizeRoles(UserRoles.User, UserRoles.Admin)]
 [ApiController]
 [Route("api/sync")]
 public class SyncController(ClientSyncService syncService) : ControllerBase
@@ -30,7 +30,7 @@ public class SyncController(ClientSyncService syncService) : ControllerBase
         Result<SyncPayload> dataResult = await _syncService.SyncSinceTimestamp(userId, formattedSince, includeDeleted);
 
         if (!dataResult.IsSuccess)
-            return StatusCode(dataResult.ErrorStatusCode, dataResult.ErrorMessage);
+            return this.ErrorResponse(dataResult);
 
         return Ok(dataResult.Data);
     }

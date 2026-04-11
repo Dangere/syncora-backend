@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.User)]
+[AuthorizeRoles(UserRoles.User)]
 [ApiController]
 [Route("api/groups/{groupId}/[controller]")]
 public class TasksController(TasksService taskService) : ControllerBase
@@ -26,7 +26,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasks(userId, groupId);
 
         if (!tasksFetchResult.IsSuccess)
-            return StatusCode(tasksFetchResult.ErrorStatusCode, tasksFetchResult.ErrorMessage);
+            return this.ErrorResponse(tasksFetchResult);
+
 
         return Ok(tasksFetchResult.Data!);
     }
@@ -40,7 +41,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<TaskDTO> fetchResult = await _taskService.GetTask(taskId, userId, groupId);
 
         if (!fetchResult.IsSuccess)
-            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
+            return this.ErrorResponse(fetchResult);
+
 
         return Ok(fetchResult.Data);
     }
@@ -53,7 +55,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<TaskDTO> createdResult = await _taskService.CreateTask(newTaskDTO, userId, groupId);
 
         if (!createdResult.IsSuccess)
-            return StatusCode(createdResult.ErrorStatusCode, createdResult.ErrorMessage);
+            return this.ErrorResponse(createdResult);
+
 
         return CreatedAtRoute(_getTaskEndpointName, new { taskId = createdResult.Data!.Id, groupId }, createdResult.Data!);
     }
@@ -66,7 +69,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<string> updateResult = await _taskService.UpdateTask(taskId, groupId, userId, updatedTaskDTO);
 
         if (!updateResult.IsSuccess)
-            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+            return this.ErrorResponse(updateResult);
+
 
         return NoContent();
     }
@@ -81,7 +85,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<string> assignResults = await _taskService.AssignTaskTo(taskId, groupId, userId, ids);
 
         if (!assignResults.IsSuccess)
-            return StatusCode(assignResults.ErrorStatusCode, assignResults.ErrorMessage);
+            return this.ErrorResponse(assignResults);
+
 
         return NoContent();
     }
@@ -96,7 +101,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<string> assignResults = await _taskService.SetAssignTaskToUsers(taskId, groupId, userId, ids);
 
         if (!assignResults.IsSuccess)
-            return StatusCode(assignResults.ErrorStatusCode, assignResults.ErrorMessage);
+            return this.ErrorResponse(assignResults);
+
 
         return NoContent();
     }
@@ -109,7 +115,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<string> updateResult = await _taskService.MarkTaskForUser(taskId, groupId, userId, isDone);
 
         if (!updateResult.IsSuccess)
-            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+            return this.ErrorResponse(updateResult);
+
 
         return NoContent();
     }
@@ -122,7 +129,8 @@ public class TasksController(TasksService taskService) : ControllerBase
         Result<string> deleteResult = await _taskService.DeleteTask(taskId, groupId, userId);
 
         if (!deleteResult.IsSuccess)
-            return StatusCode(deleteResult.ErrorStatusCode, deleteResult.ErrorMessage);
+            return this.ErrorResponse(deleteResult);
+
 
         return NoContent();
     }

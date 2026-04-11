@@ -4,7 +4,7 @@ using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
 namespace SyncoraBackend.Hubs;
 
-[AuthorizeRoles(UserRole.User, UserRole.Admin)]
+[AuthorizeRoles(UserRoles.User, UserRoles.Admin)]
 public class NotificationHub() : Hub
 {
 

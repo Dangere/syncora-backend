@@ -24,7 +24,7 @@ public class UserEntity
     [Required]
     public required string Salt { get; set; }
     [Required]
-    public required UserRole Role { get; set; } = UserRole.User;
+    public required UserRoles Role { get; set; } = UserRoles.User;
 
     [Required]
     public required bool IsVerified { get; set; } = false;
@@ -62,7 +62,7 @@ public class UserEntity
     ///     Creates a new UserEntity instance with the given parameters,
     ///     Both email and username are converted to lowercase
     /// </summary>
-    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRole role, bool isVerified, UserPreferencesDTO? userPreferences, string? profilePictureURL = null)
+    public static UserEntity CreateUser(string email, string username, string firstName, string lastName, string hash, string salt, UserRoles role, bool isVerified, UserPreferencesDTO? userPreferences, string? profilePictureURL = null)
         => new() { Preferences = new UserPreferences().UpdateFromDTO(userPreferences), Email = email.ToLower(), Username = username.ToLower(), FirstName = firstName, LastName = lastName, Hash = hash, Salt = salt, Role = role, IsVerified = isVerified, ProfilePictureURL = String.IsNullOrEmpty(profilePictureURL) ? null : profilePictureURL };
 
 

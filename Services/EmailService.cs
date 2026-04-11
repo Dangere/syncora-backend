@@ -5,9 +5,10 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class EmailService(IConfiguration configuration)
+public class EmailService(IConfiguration configuration, ILogger<EmailService> logger)
 {
     private readonly IConfiguration _config = configuration;
+    private readonly ILogger<EmailService> _logger = logger;
 
     public async Task<Result<string>> SendVerificationEmail(string toUsername, string toEmail, string url)
     {
@@ -16,7 +17,7 @@ public class EmailService(IConfiguration configuration)
             && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
 
         if (!result)
-            return Result<string>.Error("Invalid URL.");
+            return Result<string>.Error("Invalid URL.", ErrorCodes.INVALID_URL);
 
         var message = new MimeMessage();
 
@@ -54,7 +55,8 @@ public class EmailService(IConfiguration configuration)
         }
         catch (Exception ex)
         {
-            return Result<string>.Error(ex.Message);
+            _logger.LogError(ex, "An error occurred while sending verification email.");
+            return Result<string>.Error(ex.Message, ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
         finally
         {
@@ -71,7 +73,7 @@ public class EmailService(IConfiguration configuration)
             && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
 
         if (!result)
-            return Result<string>.Error("Invalid URL.");
+            return Result<string>.Error("Invalid URL.", ErrorCodes.INVALID_URL);
 
         var message = new MimeMessage();
 
@@ -109,7 +111,8 @@ public class EmailService(IConfiguration configuration)
         }
         catch (Exception ex)
         {
-            return Result<string>.Error(ex.Message);
+            _logger.LogError(ex, "An error occurred when sending password reset email!");
+            return Result<string>.Error(ex.Message, ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
         finally
         {

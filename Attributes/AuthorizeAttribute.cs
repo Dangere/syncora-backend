@@ -5,7 +5,7 @@ namespace SyncoraBackend.Attributes;
 
 public class AuthorizeRolesAttribute : AuthorizeAttribute
 {
-    public AuthorizeRolesAttribute(params UserRole[] roles) : base()
+    public AuthorizeRolesAttribute(params UserRoles[] roles) : base()
     {
         string[] stringifiedRoles = roles.Select(x => x.ToString()).ToArray();
         Roles = string.Join(",", stringifiedRoles);

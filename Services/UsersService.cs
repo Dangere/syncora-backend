@@ -23,7 +23,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, username));
 
         if (user == null)
-            return Result<UserDTO>.Error("User does not exist.", StatusCodes.Status404NotFound);
+            return Result<UserDTO>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
         return new Result<UserDTO>(_mapper.Map<UserDTO>(user));
     }
@@ -34,12 +34,12 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         // TODO: Validate image URL
         Result<bool> result = await _imagesService.ValidateUrlString(imageUrl);
         if (!result.IsSuccess)
-            return Result<string>.Error(result.ErrorMessage!, result.ErrorStatusCode);
+            return Result<string>.ErrorFrom(result);
 
         // Update user
         UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == userId);
         if (user == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+            return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
         user.ProfilePictureURL = imageUrl;
         user.LastModifiedDate = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync();
@@ -56,7 +56,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
     {
         UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == userId);
         if (user == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+            return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
         user.FirstName = updateUserProfileDTO.FirstName ?? user.FirstName;
         user.LastName = updateUserProfileDTO.LastName ?? user.LastName;
@@ -70,7 +70,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
             UserEntity? userWithSameEmailOrUserName = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Username, updateUserProfileDTO.Username));
             if (userWithSameEmailOrUserName != null)
             {
-                return Result<string>.Error("Username is already in use.", StatusCodes.Status409Conflict);
+                return Result<string>.Error("Username is already in use.", ErrorCodes.USERNAME_ALREADY_IN_USE, StatusCodes.Status409Conflict);
             }
 
             user.Username = updateUserProfileDTO.Username;

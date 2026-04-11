@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.DTOs.Groups;
-using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.Admin, UserRole.User)]
+[AuthorizeRoles(UserRoles.Admin, UserRoles.User)]
 [ApiController]
 [Route("api/[controller]")]
 public class GroupsController(GroupsService groupService) : ControllerBase
@@ -36,7 +35,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<GroupDTO> fetchResult = await _groupService.GetGroup(userId, groupId);
 
         if (!fetchResult.IsSuccess)
-            return StatusCode(fetchResult.ErrorStatusCode, fetchResult.ErrorMessage);
+            return this.ErrorResponse(fetchResult);
 
         return Ok(fetchResult.Data);
     }
@@ -49,7 +48,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<GroupDTO> createResult = await _groupService.CreateGroup(createGroupDTO, userId);
 
         if (!createResult.IsSuccess)
-            return StatusCode(createResult.ErrorStatusCode, createResult.ErrorMessage);
+            return this.ErrorResponse(createResult);
 
         return CreatedAtRoute(_getGroupEndpointName, new { groupId = createResult.Data!.Id }, createResult.Data);
     }
@@ -62,7 +61,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<string> updateResult = await _groupService.UpdateGroup(updateGroupDTO, userId, groupId);
 
         if (!updateResult.IsSuccess)
-            return StatusCode(updateResult.ErrorStatusCode, updateResult.ErrorMessage);
+            return this.ErrorResponse(updateResult);
 
         return NoContent();
     }
@@ -75,7 +74,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<string> deleteResult = await _groupService.DeleteGroup(userId, groupId);
 
         if (!deleteResult.IsSuccess)
-            return StatusCode(deleteResult.ErrorStatusCode, deleteResult.ErrorMessage);
+            return this.ErrorResponse(deleteResult);
 
         return NoContent();
     }
@@ -88,7 +87,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<string> grantResult = await _groupService.GrantAccessToGroup(groupId, userId, usernames);
 
         if (!grantResult.IsSuccess)
-            return StatusCode(grantResult.ErrorStatusCode, grantResult.ErrorMessage);
+            return this.ErrorResponse(grantResult);
 
         return Ok(grantResult.Data);
     }
@@ -101,7 +100,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<string> revokeResult = await _groupService.RevokeAccessToGroup(groupId, userId, usernames);
 
         if (!revokeResult.IsSuccess)
-            return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
+            return this.ErrorResponse(revokeResult);
 
         return Ok(revokeResult.Data);
 
@@ -117,7 +116,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
         Result<string> revokeResult = await _groupService.LeaveGroup(groupId, userId);
 
         if (!revokeResult.IsSuccess)
-            return StatusCode(revokeResult.ErrorStatusCode, revokeResult.ErrorMessage);
+            return this.ErrorResponse(revokeResult);
 
         return NoContent();
     }

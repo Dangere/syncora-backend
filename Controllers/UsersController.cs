@@ -11,7 +11,7 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Controllers;
 
-[AuthorizeRoles(UserRole.Admin, UserRole.User)]
+[AuthorizeRoles(UserRoles.Admin, UserRoles.User)]
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController(UsersService usersService, ImagesService imagesService) : ControllerBase
@@ -25,8 +25,7 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
         Result<UserDTO> result = await _usersService.GetUser(username);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
-
+            return this.ErrorResponse(result);
 
         return Ok(result.Data!);
     }
@@ -40,7 +39,8 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
         Result<UploadSignature> result = await _imagesService.GenerateUploadSignature(userId);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
+            return this.ErrorResponse(result);
+
 
 
         return Ok(result.Data!);
@@ -54,7 +54,8 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
         Result<string> result = await _usersService.UpdateUserProfilePicture(userId, imageUrl);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
+            return this.ErrorResponse(result);
+
 
 
         return Ok(result.Data!);
@@ -69,7 +70,8 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
         Result<string> result = await _usersService.UpdateUserProfile(updateUserProfileDTO, userId);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
+            return this.ErrorResponse(result);
+
 
 
         return Ok(result.Data!);

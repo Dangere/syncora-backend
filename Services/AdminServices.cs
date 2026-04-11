@@ -23,7 +23,7 @@ public class AdminServices(SyncoraDbContext dbContext)
 
 
         if (user == null)
-            return Result<string>.Error("User does not exist.", StatusCodes.Status404NotFound);
+            return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
         // Generate salt and hash
         string salt = Hashing.GenerateSalt();
@@ -46,7 +46,7 @@ public class AdminServices(SyncoraDbContext dbContext)
         catch (Exception)
         {
             await transaction.RollbackAsync();
-            return Result<string>.Error("Failed to update user password.", StatusCodes.Status500InternalServerError);
+            return Result<string>.Error("Failed to update user password.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
         return Result<string>.Success("Password updated.");

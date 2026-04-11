@@ -6,7 +6,7 @@ using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
-[AuthorizeRoles(UserRole.User, UserRole.Admin)]
+[AuthorizeRoles(UserRoles.User, UserRoles.Admin)]
 public class SyncHub(GroupsService groupService, UsersService usersService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
 {
     private readonly GroupsService _groupService = groupService;

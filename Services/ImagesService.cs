@@ -20,7 +20,7 @@ public class ImagesService(IImagesRepository imagesRepository)
         }
         catch (Exception)
         {
-            return Result<UploadSignature>.Error("Failed to generate upload signature.", StatusCodes.Status500InternalServerError);
+            return Result<UploadSignature>.Error("Failed to generate upload signature.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
     }
@@ -36,7 +36,7 @@ public class ImagesService(IImagesRepository imagesRepository)
         }
         catch (Exception)
         {
-            return Result<string>.Error("Failed to add photo.", StatusCodes.Status500InternalServerError);
+            return Result<string>.Error("Failed to add photo.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -49,7 +49,7 @@ public class ImagesService(IImagesRepository imagesRepository)
         }
         catch (System.Exception)
         {
-            return Result<bool>.Error("Invalid image URL.");
+            return Result<bool>.Error("Invalid image URL.", ErrorCodes.INVALID_URL);
         }
     }
 

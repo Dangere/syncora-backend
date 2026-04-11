@@ -31,7 +31,11 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithEmailAndPassword(loginRequest.Email, loginRequest.Password);
 
         if (!loginResult.IsSuccess)
-            return StatusCode(loginResult.ErrorStatusCode, loginResult.ErrorMessage);
+        {
+
+            return this.ErrorResponse(loginResult);
+        }
+
 
 
         return Ok(loginResult.Data);
@@ -42,15 +46,19 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     public async Task<IActionResult> RegisterWithEmailAndPassword([FromBody] RegisterRequestDTO registerRequest)
     {
         string? verifyUrl = Url.Link(
-    routeName: _verifyEmailEndpointName,
-    null
-);
+            routeName: _verifyEmailEndpointName,
+            null
+        );
         if (verifyUrl == null)
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate verification URL" });
+            return this.ErrorResponse(
+                Result<string>.Error("Could not generate verification URL", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError)
+            );
+
         Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithEmailAndPassword(registerRequest, verifyUrl);
 
         if (!registerResult.IsSuccess)
-            return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
+            return this.ErrorResponse(registerResult);
+
 
 
         return Ok(registerResult.Data);
@@ -64,7 +72,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<TokensDTO> refreshTokenResult = await _authService.RefreshToken(expiredAccessToken: tokens.AccessToken, refreshToken: tokens.RefreshToken);
 
         if (!refreshTokenResult.IsSuccess)
-            return StatusCode(refreshTokenResult.ErrorStatusCode, refreshTokenResult.ErrorMessage);
+            return this.ErrorResponse(refreshTokenResult);
+
 
         return Ok(refreshTokenResult.Data);
         // This will return a new access token and a new refresh token
@@ -79,7 +88,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithGoogle(idToken);
 
         if (!loginResult.IsSuccess)
-            return StatusCode(loginResult.ErrorStatusCode, loginResult.ErrorMessage);
+            return this.ErrorResponse(loginResult);
+
 
         return Ok(loginResult.Data);
     }
@@ -89,7 +99,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<AuthenticationResponseDTO> registerResult = await _authService.RegisterWithGoogle(registerWithGoogleRequest);
 
         if (!registerResult.IsSuccess)
-            return StatusCode(registerResult.ErrorStatusCode, registerResult.ErrorMessage);
+            return this.ErrorResponse(registerResult);
+
 
         return Ok(registerResult.Data);
     }
@@ -100,14 +111,15 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<string> verifyResult = await _authService.ConfirmVerificationEmail(token);
 
         if (!verifyResult.IsSuccess)
-            return StatusCode(verifyResult.ErrorStatusCode, verifyResult.ErrorMessage);
+            return this.ErrorResponse(verifyResult);
+
 
 
         return Ok(verifyResult.Data);
 
     }
 
-    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("verify/send"), EnableRateLimiting("email-policy")]
+    [AuthorizeRoles(UserRoles.User, UserRoles.Admin), HttpPost("verify/send"), EnableRateLimiting("email-policy")]
     public async Task<IActionResult> SendEmailVerification()
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -117,18 +129,21 @@ public class AuthenticationController(AuthService authService) : ControllerBase
             null
         );
         if (verifyUrl == null)
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate verification URL" });
+            return this.ErrorResponse(
+                Result<string>.Error("Could not generate verification URL", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError)
+            );
 
         Result<string> emailResult = await _authService.SendVerificationEmail(userId, verifyUrl);
 
         if (!emailResult.IsSuccess)
-            return StatusCode(emailResult.ErrorStatusCode, emailResult.ErrorMessage);
+            return this.ErrorResponse(emailResult);
+
 
 
         return Ok(emailResult.Data);
     }
 
-    [AuthorizeRoles(UserRole.User, UserRole.Admin), HttpPost("verify/status")]
+    [AuthorizeRoles(UserRoles.User, UserRoles.Admin), HttpPost("verify/status")]
     public async Task<IActionResult> CheckVerificationStatus()
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -136,7 +151,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
         Result<bool> checkResult = await _authService.CheckUserVerification(userId);
 
         if (!checkResult.IsSuccess)
-            return StatusCode(checkResult.ErrorStatusCode, checkResult.ErrorMessage);
+            return this.ErrorResponse(checkResult);
+
 
 
         return Ok(checkResult.Data);
@@ -154,12 +170,15 @@ public class AuthenticationController(AuthService authService) : ControllerBase
 
 
         if (passwordRestPageUrl == null)
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Could not generate password reset page URL" });
+            return this.ErrorResponse(
+                 Result<string>.Error("Could not generate password reset page URL", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError)
+            );
 
         Result<string> emailResult = await _authService.SendPasswordResetEmail(email, passwordRestPageUrl);
 
         if (!emailResult.IsSuccess)
-            return StatusCode(emailResult.ErrorStatusCode, emailResult.ErrorMessage);
+            return this.ErrorResponse(emailResult);
+
 
 
         return Ok(emailResult.Data);

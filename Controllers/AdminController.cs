@@ -13,7 +13,7 @@ namespace SyncoraBackend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[AuthorizeRoles(UserRole.Admin)]
+[AuthorizeRoles(UserRoles.Admin)]
 public class AdminController(AdminServices adminService) : ControllerBase
 {
 
@@ -26,11 +26,12 @@ public class AdminController(AdminServices adminService) : ControllerBase
     {
         Result<string> result = await _adminService.UpdateUserPassword(username, newPassword);
 
-        if (result.IsSuccess)
+        if (!result.IsSuccess)
         {
-            return Ok(result.Data);
+            return this.ErrorResponse(result);
         }
-        return StatusCode(result.ErrorStatusCode, result.ErrorMessage);
+
+        return Ok(result.Data);
 
     }
 

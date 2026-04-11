@@ -25,7 +25,7 @@ public class MappingProfile : Profile
         CreateMap<UserEntity, UserDTO>()
         .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
         CreateMap<UserDTO, UserEntity>()
-        .ForMember(dest => dest.Role, opt => opt.MapFrom(src => Enum.Parse<UserRole>(src.Role)));
+        .ForMember(dest => dest.Role, opt => opt.MapFrom(src => Enum.Parse<UserRoles>(src.Role)));
 
 
 
