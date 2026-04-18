@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, Dangere=patch-1]
   workflow_dispatch:
 
 jobs:
