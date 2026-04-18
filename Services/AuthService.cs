@@ -6,13 +6,9 @@ using SyncoraBackend.Enums;
 using SyncoraBackend.Models.DTOs.Auth;
 using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Models.Entities;
-using Microsoft.AspNetCore.Routing.Template;
 using System.Security.Claims;
 using Google.Apis.Auth;
-using SyncoraBackend.Migrations;
-using System.Security.Cryptography;
 using System.Net;
-using SyncoraBackend.Models.Common;
 
 
 namespace SyncoraBackend.Services;

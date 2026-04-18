@@ -60,7 +60,7 @@ builder.Services.AddSingleton(provider =>
 
 // Add DbContext to the services, Lifecycle: Scoped
 builder.Services.AddDbContext<SyncoraDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("LocalConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
 
@@ -200,7 +200,9 @@ app.UseAuthorization();
 app.MapHub<SyncHub>("/hubs/sync");
 app.MapHub<SyncHub>("/hubs/notification");
 
+app.MapGet("/hello", () => "Hello World!");
 
-Console.WriteLine($"\n Running with connection string: {builder.Configuration.GetConnectionString("LocalConnection")}");
+
+Console.WriteLine($"\n Running with connection string: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 app.Run();
 public partial class Program { }
