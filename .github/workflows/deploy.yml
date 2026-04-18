@@ -31,9 +31,6 @@ jobs:
           local-dir: ./publish/
           server-dir: /wwwroot/
           
-      - name: Debug via SSH
-        uses: mxschmitt/action-tmate@v3
-          
   
 
 
