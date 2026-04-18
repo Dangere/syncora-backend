@@ -15,11 +15,12 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
+      - name: Write production config
+        run: echo '${{ secrets.APPSETTINGS_PRODUCTION }}' > appsettings.Production.json
 
       - name: Debug via SSH
         uses: mxschmitt/action-tmate@v3
           
-      - name: Write production config
-        run: echo '${{ secrets.APPSETTINGS_PRODUCTION }}' > ./publish/appsettings.Production.json
+  
 
 
