@@ -82,8 +82,8 @@ public class AuthenticationController(AuthService authService) : ControllerBase
     }
 
 
-    [AllowAnonymous, HttpPost("login/google/{idToken}")]
-    public async Task<IActionResult> LoginWithGoogle(string idToken)
+    [AllowAnonymous, HttpPost("login/google")]
+    public async Task<IActionResult> LoginWithGoogle([FromBody] string idToken)
     {
         Result<AuthenticationResponseDTO> loginResult = await _authService.LoginWithGoogle(idToken);
 
