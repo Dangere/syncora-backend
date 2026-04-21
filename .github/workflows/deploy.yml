@@ -15,11 +15,22 @@ jobs:
       - uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
-
-      - name: Debug via SSH
-        uses: mxschmitt/action-tmate@v3
           
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+        
       - name: Write production config
         run: echo '${{ secrets.APPSETTINGS_PRODUCTION }}' > ./publish/appsettings.Production.json
+        
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./publish/
+          server-dir: /wwwroot/
+          
+  
 
 
