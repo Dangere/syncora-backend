@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.DTOs.Groups;
+using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
@@ -84,7 +85,7 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> grantResult = await _groupService.GrantAccessToGroup(groupId, userId, usernames);
+        Result<List<UserDTO>> grantResult = await _groupService.GrantAccessToGroup(groupId, userId, usernames);
 
         if (!grantResult.IsSuccess)
             return this.ErrorResponse(grantResult);

@@ -120,41 +120,41 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
     // public async Task<Result<UserDTO>> AllowAccessToGroup(int groupId, int userId, List<string> usernamesToGrant, bool allowAccess)
     // { ... }
 
-    public async Task<Result<string>> GrantAccessToGroup(int groupId, int userId, List<string> usernamesToGrant)
+    public async Task<Result<List<UserDTO>>> GrantAccessToGroup(int groupId, int userId, List<string> usernamesToGrant)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
-            return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
+            return Result<List<UserDTO>>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
         bool isOwner = groupEntity.OwnerUserId == userId;
         bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null);
         if (!isOwner && isShared)
         {
-            return Result<string>.Error("A shared user can't grant access to a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
+            return Result<List<UserDTO>>.Error("A shared user can't grant access to a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
         }
         else if (!isOwner && !isShared)
-            return Result<string>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
+            return Result<List<UserDTO>>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
 
         if (usernamesToGrant.Count == 0)
-            return Result<string>.Error("No usernames were provided.", ErrorCodes.NO_USERNAMES_PROVIDED, StatusCodes.Status400BadRequest);
+            return Result<List<UserDTO>>.Error("No usernames were provided.", ErrorCodes.NO_USERNAMES_PROVIDED, StatusCodes.Status400BadRequest);
 
         List<UserEntity> usersToGrant = await _dbContext.Users.Where(u => usernamesToGrant.Contains(u.Username)).ToListAsync();
         List<int> usersIdsToGrant = usersToGrant.Select(u => u.Id).ToList();
         var now = DateTime.UtcNow;
 
         if (usersToGrant.Count != usernamesToGrant.Count)
-            return Result<string>.Error((usernamesToGrant.Count - usersToGrant.Count) + " Users do not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
+            return Result<List<UserDTO>>.Error((usernamesToGrant.Count - usersToGrant.Count) + " Users do not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
         if (usersToGrant.Any(u => u.Id == userId))
-            return Result<string>.Error("You can't grant access to yourself as the group owner.", ErrorCodes.OWNER_CANNOT_PERFORM_ACTION);
+            return Result<List<UserDTO>>.Error("You can't grant access to yourself as the group owner.", ErrorCodes.OWNER_CANNOT_PERFORM_ACTION);
 
         foreach (UserEntity userToGrant in usersToGrant)
         {
             bool isUserAlreadyGranted = groupEntity.GroupMembers.Any(m => m.UserId == userToGrant.Id && m.GroupId == groupId && m.KickedAt == null);
 
             if (isUserAlreadyGranted)
-                return Result<string>.Error($"User {userToGrant.Username} has already been granted access.", ErrorCodes.USER_ALREADY_GRANTED);
+                return Result<List<UserDTO>>.Error($"User {userToGrant.Username} has already been granted access.", ErrorCodes.USER_ALREADY_GRANTED);
         }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync();
@@ -184,7 +184,7 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         {
             _logger.LogError(ex, "Failed to grant access to group.");
             await transaction.RollbackAsync();
-            return Result<string>.Error("Failed to grant access to group.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
+            return Result<List<UserDTO>>.Error("Failed to grant access to group.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
         //We get the stored data to send it to the clients
@@ -201,7 +201,7 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
             await _clientSyncService.PushPayloadToPerson(userToGrant.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Users: usersData, Tasks: tasksData));
             await _clientSyncService.AddUserToHubGroup(userToGrant.Id, groupEntity.Id);
         }
-        return Result<string>.Success("Access granted.");
+        return Result<List<UserDTO>>.Success([.. usersToGrant.Select(_mapper.Map<UserDTO>)]);
     }
 
     public async Task<Result<string>> RevokeAccessToGroup(int groupId, int userId, List<string> usernamesToRevoke)
