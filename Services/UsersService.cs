@@ -46,7 +46,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
 
         //  Notify users
-        await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
+        await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(userId), SyncPayload.FromEntity(Users: [user]));
 
 
         return Result<string>.Success("Profile picture updated.");
@@ -82,7 +82,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
         // Notify users
         if (!updateUserProfileDTO.IsUpdatingPreferencesOnly)
-            await _clientSyncService.PushPayloadToRelatedUsers(userId, SyncPayload.FromEntity(Users: [user]));
+            await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(userId), SyncPayload.FromEntity(Users: [user]));
         return Result<string>.Success("Profile updated.");
 
     }

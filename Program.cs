@@ -44,7 +44,7 @@ builder.Services.AddScoped<AdminServices>();
 // Configure Cloudinary for image upload
 builder.Services.AddSingleton(provider =>
 {
-    Cloudinary cloudinary = new(builder.Configuration.GetSection("CloudinarySettings")["URL"]);
+    Cloudinary cloudinary = new(builder.Configuration.GetSection("CloudinaryConfig")["URL"]);
     cloudinary.Api.Secure = true;
     return cloudinary;
 });

@@ -37,4 +37,12 @@ public class InMemoryHubConnectionManager
                 : [];
         }
     }
+
+    public IReadOnlyList<string> GetConnectionsForUsers(List<int> userIds)
+    {
+        lock (_connections)
+        {
+            return [.. userIds.SelectMany(userId => _connections.TryGetValue(userId, out var conns) ? conns : [])];
+        }
+    }
 }
