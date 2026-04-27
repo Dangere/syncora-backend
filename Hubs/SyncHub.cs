@@ -31,14 +31,14 @@ public class SyncHub(GroupsService groupService, UsersService usersService, ILog
             await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
         }
 
-        // Get the related user ids 
-        List<int> relatedUserIds = await _usersService.GetRelatedUserIds(userId);
+        // // Get the related user ids 
+        // List<int> relatedUserIds = await _usersService.GetRelatedUserIds(userId);
 
-        // Create / Join the related users groups
-        foreach (int relatedUserId in relatedUserIds)
-        {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{relatedUserId}");
-        }
+        // // Create / Join the related users groups
+        // foreach (int relatedUserId in relatedUserIds)
+        // {
+        //     await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{relatedUserId}");
+        // }
 
 
         await base.OnConnectedAsync();

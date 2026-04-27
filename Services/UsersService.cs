@@ -101,11 +101,11 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
         var rawRelatedUserIds = await _dbContext.Groups.Include(g => g.GroupMembers)
             .Where(g => (g.OwnerUserId == userId ||
-                        g.GroupMembers.Any(m => m.UserId == userId)) && g.DeletedAt == null)
+                        g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null)) && g.DeletedAt == null)
             .Select(g => new { g.OwnerUserId, g.GroupMembers })
             .ToListAsync();
 
-        var relatedUserIds = new HashSet<int>(rawRelatedUserIds.SelectMany(g => new int[] { g.OwnerUserId }.Union(g.GroupMembers.Select(m => m.UserId))));
+        var relatedUserIds = new HashSet<int>(rawRelatedUserIds.SelectMany(g => new int[] { g.OwnerUserId }.Union(g.GroupMembers.Where(m => m.KickedAt == null).Select(m => m.UserId))));
 
         relatedUserIds.Remove(userId);
 
