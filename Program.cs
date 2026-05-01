@@ -177,9 +177,26 @@ builder.Services.AddRateLimiter(options =>
         Console.WriteLine($"Rate limit exceeded for IP: {context.HttpContext.Connection.RemoteIpAddress}");
     };
 });
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("cors-origin-policy",
+        builder =>
+        {
+            builder.WithOrigins("https://dangere.github.io").AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
+
+
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+app.UseCors("cors-origin-policy");
+
 
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 
