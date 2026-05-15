@@ -5,6 +5,7 @@ using SyncoraBackend.Data;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Utilities;
 using SyncoraBackend.Models.DTOs.Sync;
+using SyncoraBackend.Enums;
 
 namespace SyncoraBackend.Services;
 
@@ -62,7 +63,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
-    // TODO: Change it so group members can complete tasks using this method or make a new method designed for that 
+    // TODO(DONE): Change it so group members can complete tasks using this method or make a new method designed for that 
     public async Task<Result<string>> UpdateTask(int taskId, int groupId, int userId, UpdateTaskDetailsDTO updatedTaskDTO)
     {
 

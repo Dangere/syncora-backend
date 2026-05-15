@@ -13,13 +13,6 @@ namespace SyncoraBackend.Services;
 public class TokenService(IConfiguration configuration)
 {
     private readonly IConfiguration _config = configuration;
-
-    // You should NOT create an access token from a username/password request.
-    // Username/password requests aren't authenticated and are vulnerable to impersonation and phishing attacks.
-    // Access tokens should only be created using an OpenID Connect flow or an OAuth standard flow.
-    // Deviating from these standards can result in an insecure app.
-
-    // We are ignoring this for the sake of simplicity until we implement the OpenID Connect flow or OAuth standard flow.
     public string GenerateAccessToken(UserEntity user)
     {
         var jwtConfig = _config.GetSection("Jwt");

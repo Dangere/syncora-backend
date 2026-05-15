@@ -57,6 +57,9 @@ public class UserEntity
     public HashSet<VerificationTokenEntity> VerificationTokens { get; } = [];
     public HashSet<PasswordResetTokenEntity> PasswordResetTokens { get; } = [];
 
+    // This will navigate to user bug reports and error reports
+    public HashSet<ReportEntity> Reports { get; } = [];
+
 
     /// <summary>
     ///     Creates a new UserEntity instance with the given parameters,

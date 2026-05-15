@@ -4,6 +4,7 @@ using SyncoraBackend.Models.DTOs.Tasks;
 using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Models.DTOs.Report;
 
 namespace SyncoraBackend.Middleware;
 
@@ -26,6 +27,10 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.Role.ToString()));
         CreateMap<UserDTO, UserEntity>()
         .ForMember(dest => dest.Role, opt => opt.MapFrom(src => Enum.Parse<UserRoles>(src.Role)));
+
+
+        _ = CreateMap<SubmitReportDTO, ReportEntity>()
+        .ForMember(dest => dest.UserId, opt => opt.MapFrom((src, dest, destMember, context) => context.Items["UserId"])).ForMember(dest => dest.Type, opt => opt.MapFrom((src, dest, destMember, context) => context.Items["Type"]));
 
 
 

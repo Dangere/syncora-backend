@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SyncoraBackend.Models.Entities;
 
 namespace SyncoraBackend.Data;
@@ -16,6 +18,7 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
     public DbSet<RefreshTokenEntity> RefreshTokens { get; set; }
     public DbSet<VerificationTokenEntity> VerificationTokens { get; set; }
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens { get; set; }
+    public DbSet<ReportEntity> Reports { get; set; }
 
 
 
@@ -30,8 +33,6 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         modelBuilder.Entity<TaskEntity>().HasMany(t => t.AssignedTo).WithMany(u => u.AssignedTasks);
         modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany(u => u.CompletedTasks).HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.SetNull);
 
-        // modelBuilder.Entity<TaskEntity>().HasOne(t => t.CompletedBy).WithMany().HasForeignKey(t => t.CompletedById).OnDelete(DeleteBehavior.Cascade);
-
         // One-to-Many: A User has many groups, while groups can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.OwnedGroups).WithOne(tg => tg.OwnerUser).HasForeignKey(tg => tg.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
 
@@ -44,23 +45,35 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         // One-to-Many: A User has many refresh tokens, while refresh token can be owned by only one user
         modelBuilder.Entity<UserEntity>().HasMany(u => u.RefreshTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<ReportEntity>().HasOne(r => r.User).WithMany(u => u.Reports).HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+
+
+
+
+        // The report entity will never be updated once inserted, so the value comparer is set to no-op
+        var JsonSerializerOptions = (JsonSerializerOptions?)null;
+        modelBuilder.Entity<ReportEntity>()
+            .Property(e => e.Breadcrumbs)
+            .HasConversion(b => JsonSerializer.Serialize(b, JsonSerializerOptions), b => JsonSerializer.Deserialize<Dictionary<string, object>[]>(b, JsonSerializerOptions) ?? new Dictionary<string, object>[0]).Metadata.SetValueComparer(Comparers.arrayDictComparerNoOp);
+
+        modelBuilder.Entity<ReportEntity>()
+            .Property(e => e.UserSession)
+            .HasConversion(us => JsonSerializer.Serialize(us, JsonSerializerOptions), us => JsonSerializer.Deserialize<Dictionary<string, object>>(us, JsonSerializerOptions) ?? new Dictionary<string, object>()).Metadata.SetValueComparer(Comparers.dictComparerNoOp);
+
+        modelBuilder.Entity<ReportEntity>()
+            .Property(e => e.AppState)
+            .HasConversion(appState => JsonSerializer.Serialize(appState, JsonSerializerOptions), appState => JsonSerializer.Deserialize<Dictionary<string, object>>(appState, JsonSerializerOptions) ?? new Dictionary<string, object>()).Metadata.SetValueComparer(Comparers.dictComparerNoOp);
+
 
         modelBuilder.Entity<UserEntity>()
         .OwnsOne(u => u.Preferences, builder =>
         {
-            // This tells EF Core to store this object as a JSON string 
-            // inside a column named "Preferences"
             builder.ToJson();
         });
-        // // Many-to-Many: A group can be accessed by multiple users, while users can have access to multiple group
-        // modelBuilder.Entity<UserEntity>().HasMany(u => u.AccessibleGroups).WithMany(tg => tg.Members);
 
         // One-to-Many: A User has many groups, while groups can be owned by only one user
         modelBuilder.Entity<GroupMemberEntity>().HasOne(gm => gm.User).WithMany(u => u.GroupMemberships).HasForeignKey(u => u.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<GroupMemberEntity>().HasOne(gm => gm.Group).WithMany(g => g.GroupMembers).HasForeignKey(u => u.GroupId).OnDelete(DeleteBehavior.Cascade);
-
-
-
 
         modelBuilder.Entity<DeletedRecord>(b =>
            {

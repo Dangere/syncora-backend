@@ -30,7 +30,7 @@ public static class Validators
 
     public static bool ValidateUsername(string username)
     {
-        if (username.Length > 20 || username.Length < 2)
+        if (username.Length > 20 || username.Length < 3)
             return false;
 
 
@@ -43,7 +43,7 @@ public static class Validators
     {
         if (string.IsNullOrEmpty(name))
             return false;
-        return Regex.IsMatch(name, @"^[^';<>\s\\]{1,20}$");
+        return Regex.IsMatch(name, @"^[^';<>\s\\]{3,20}$");
     }
 
     public static bool ValidateTitle(string title)

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using SyncoraBackend.Enums;
 
 namespace SyncoraBackend.Models.Entities;
 
@@ -62,10 +63,4 @@ public class GroupEntity
 
     }
 
-}
-public enum GroupAccess
-{
-    Owner,
-    Shared,
-    Denied
 }

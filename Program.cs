@@ -34,6 +34,8 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<IImagesRepository>(provider => new CloudinaryImageRepository(provider.GetRequiredService<Cloudinary>()));
 builder.Services.AddScoped<ImagesService>();
+builder.Services.AddScoped<ReportServices>();
+
 
 
 builder.Services.AddSingleton<InMemoryHubConnectionManager>();
