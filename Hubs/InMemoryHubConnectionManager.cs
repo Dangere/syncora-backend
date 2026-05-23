@@ -2,16 +2,17 @@ namespace SyncoraBackend.Hubs;
 
 public class InMemoryHubConnectionManager
 {
-    private readonly Dictionary<int, HashSet<string>> _connections = new();
+    // Dictionary<UserId, HashSet<ConnectionId, DeviceId>>
+    private readonly Dictionary<int, HashSet<(string ConnectionId, string DeviceId)>> _connections = [];
 
-    public void AddConnection(int userId, string connectionId)
+    public void AddConnection(int userId, string connectionId, string deviceId)
     {
         lock (_connections)
         {
             if (!_connections.ContainsKey(userId))
-                _connections[userId] = new HashSet<string>();
+                _connections[userId] = [];
 
-            _connections[userId].Add(connectionId);
+            _connections[userId].Add((connectionId, deviceId));
         }
     }
 
@@ -21,28 +22,28 @@ public class InMemoryHubConnectionManager
         {
             if (_connections.TryGetValue(userId, out var conns))
             {
-                conns.Remove(connectionId);
+                conns.RemoveWhere(c => c.ConnectionId == connectionId);
                 if (conns.Count == 0)
                     _connections.Remove(userId);
             }
         }
     }
 
-    public IReadOnlyList<string> GetConnections(int userId)
+    public IReadOnlyList<string> GetConnections(int userId, string? excludeDeviceId = null)
     {
         lock (_connections)
         {
             return _connections.TryGetValue(userId, out var conns)
-                ? conns.ToList()
+                ? conns.Where(c => c.DeviceId != excludeDeviceId).Select(c => c.ConnectionId).ToList()
                 : [];
         }
     }
 
-    public IReadOnlyList<string> GetConnectionsForUsers(List<int> userIds)
+    public IReadOnlyList<string> GetConnectionsForUsers(List<int> userIds, string? excludeDeviceId = null)
     {
         lock (_connections)
         {
-            return [.. userIds.SelectMany(userId => _connections.TryGetValue(userId, out var conns) ? conns : [])];
+            return [.. userIds.SelectMany(userId => _connections.TryGetValue(userId, out var conns) ? conns.Where(c => c.DeviceId != excludeDeviceId).Select(c => c.ConnectionId) : [])];
         }
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using SyncoraBackend.Data;
 using SyncoraBackend.Hubs;
 using SyncoraBackend.interfaces;
+using SyncoraBackend.Models;
 using SyncoraBackend.Repositories;
 using SyncoraBackend.Services;
 
@@ -35,6 +36,10 @@ builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<IImagesRepository>(provider => new CloudinaryImageRepository(provider.GetRequiredService<Cloudinary>()));
 builder.Services.AddScoped<ImagesService>();
 builder.Services.AddScoped<ReportServices>();
+
+// Request context will have data about the current request scoped to the lifetime of the request
+builder.Services.AddScoped<UserRequestContext>();
+
 
 
 
@@ -148,6 +153,20 @@ builder.Services.AddRateLimiter(options =>
             };
         });
     });
+    options.AddPolicy("report-policy", httpContext =>
+{
+    var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    return RateLimitPartition.GetFixedWindowLimiter(partitionKey: clientIp, factory: _ =>
+    {
+        return new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5, // Max 5 requests
+            Window = TimeSpan.FromMinutes(1), // Per 1 minute window
+            QueueLimit = 0, // No queuing, immediate rejection if limit exceeded
+        };
+    });
+});
 
     options.AddPolicy("email-policy", httpContext =>
 {
@@ -200,7 +219,6 @@ var app = builder.Build();
 app.UseCors("cors-origin-policy");
 
 
-app.UseMiddleware<ExceptionHandlerMiddleware>();
 
 // Add middleware to serve static files
 app.UseStaticFiles();
@@ -212,9 +230,14 @@ app.UseRateLimiter();
 app.MapRazorPages();
 app.MapControllers();
 
+
 // Using authentication and authorization middleware to secure endpoints
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+app.UseMiddleware<UserContextMiddleware>();
 
 app.MapHub<SyncHub>("/hubs/sync");
 app.MapHub<SyncHub>("/hubs/notification");

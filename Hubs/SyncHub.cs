@@ -18,9 +18,11 @@ public class SyncHub(GroupsService groupService, UsersService usersService, ILog
 
     public override async Task OnConnectedAsync()
     {
+        // Get the device id to be used later to exclude sending events to the same device firing them
+        var deviceId = Context.GetHttpContext()?.Request.Query["deviceId"].ToString();
         int userId = int.Parse(Context.User!.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        _logger.LogInformation("A client has connected, UserId: {UserId}", userId);
-        _inMemoryConnectionManager.AddConnection(userId, Context.ConnectionId);
+        _logger.LogInformation("A client has connected, UserId: {UserId} DeviceId: {DeviceId}", userId, deviceId);
+        _inMemoryConnectionManager.AddConnection(userId, Context.ConnectionId, deviceId ?? userId.ToString());
 
         // Get the groups the user is in
         List<GroupDTO> groups = await _groupService.GetGroups(userId);

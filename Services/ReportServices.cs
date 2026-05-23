@@ -18,12 +18,8 @@ public class ReportServices(IMapper mapper, SyncoraDbContext dbContext)
 
 
 
-    public async Task<Result<string>> StoreErrorReport(SubmitReportDTO reportDTO, int userId)
+    public async Task<Result<string>> StoreErrorReport(SubmitReportDTO reportDTO, int? userId)
     {
-        // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
-
         ReportEntity submittedReport = _mapper.Map<SubmitReportDTO, ReportEntity>(reportDTO, opt =>
         {
             opt.Items["UserId"] = userId;
@@ -37,12 +33,8 @@ public class ReportServices(IMapper mapper, SyncoraDbContext dbContext)
 
     }
 
-    public async Task<Result<string>> StoreBugReport(SubmitReportDTO reportDTO, int userId)
+    public async Task<Result<string>> StoreBugReport(SubmitReportDTO reportDTO, int? userId)
     {
-
-        // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(userId) == null)
-            return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
         ReportEntity submittedReport = _mapper.Map<SubmitReportDTO, ReportEntity>(reportDTO, opt =>
         {

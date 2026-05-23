@@ -6,15 +6,18 @@ using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Utilities;
 using SyncoraBackend.Models.DTOs.Sync;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Models;
 
 namespace SyncoraBackend.Services;
 
-public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSyncService clientSyncService)
+public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSyncService clientSyncService, UserRequestContext userRequestContext)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
     private readonly ClientSyncService _clientSyncService = clientSyncService;
+
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
 
     public async Task<Result<List<TaskDTO>>> GetTasks(int userId, int groupId, DateTime? sinceUtc = null)
     {
@@ -262,6 +265,10 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
     public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int userId, int groupId)
     {
+        Console.WriteLine(_userRequestContext.UserId);
+        Console.WriteLine(_userRequestContext.DeviceId);
+
+
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<TaskDTO>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);

@@ -31,8 +31,7 @@ public class ReportEntity
     public required Dictionary<string, object> AppState { get; set; }
     public required DateTime CreationDate { get; set; }
 
-    [Required]
-    public required int UserId { get; set; }
-    public UserEntity User { get; set; } = null!;
+    public int? UserId { get; set; }
+    public UserEntity? User { get; set; } = null;
 
 }
