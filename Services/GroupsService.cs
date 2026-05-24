@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
 using SyncoraBackend.Hubs;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Models.DTOs.Sync;
 using SyncoraBackend.Models.DTOs.Users;
@@ -11,22 +12,22 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, SyncoraDbContext dbContext, ClientSyncService clientSyncService)
+public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, SyncoraDbContext dbContext, ClientSyncService clientSyncService, UserRequestContext userRequestContext)
 {
     private readonly IMapper _mapper = mapper;
     private readonly ILogger<GroupsService> _logger = logger;
     private readonly SyncoraDbContext _dbContext = dbContext;
 
     private readonly ClientSyncService _clientSyncService = clientSyncService;
-
-    public async Task<Result<GroupDTO>> GetGroup(int userId, int groupId)
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
+    public async Task<Result<GroupDTO>> GetGroup(int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<GroupDTO>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        if (groupEntity.OwnerUserId == userId || groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null))
+        if (groupEntity.OwnerUserId == _userRequestContext.UserId || groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null))
             return new Result<GroupDTO>(_mapper.Map<GroupDTO>(groupEntity));
 
         return Result<GroupDTO>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
@@ -34,37 +35,42 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
 
     // TODO: Add pagination
     // Returns groups owned by the user or shared with the user
-    public async Task<List<GroupDTO>> GetGroups(int userId, DateTime? sinceUtc = null)
+    public async Task<List<GroupDTO>> GetGroups()
     {
-        List<GroupDTO> groups;
-        if (sinceUtc != null)
-        {
-            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null)) && g.LastModifiedDate > sinceUtc && g.DeletedAt == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
-        }
-        else
-        {
-            groups = await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null)) && g.DeletedAt == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
-        }
 
-        return groups;
+
+        return await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == _userRequestContext.UserId || g.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null)) && g.DeletedAt == null).OrderBy(t => t.CreationDate).ProjectTo<GroupDTO>(_mapper.ConfigurationProvider).ToListAsync();
+
+    }
+    /// <summary>
+    /// Returns groups ids owned by the user or shared with the user
+    /// </summary>
+    /// <param name="sinceUtc"></param>
+    /// <returns></returns>
+
+    public async Task<List<int>> GetGroupIds()
+    {
+
+        return await _dbContext.Groups.AsNoTracking().Where(g => (g.OwnerUserId == _userRequestContext.UserId || g.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null)) && g.DeletedAt == null).OrderBy(t => t.CreationDate).Select(g => g.Id).ToListAsync();
+
     }
 
-    public async Task<Result<GroupDTO>> CreateGroup(CreateGroupDTO createGroupDTO, int userId)
+    public async Task<Result<GroupDTO>> CreateGroup(CreateGroupDTO createGroupDTO)
     {
         // Make sure the user exists
-        if (await _dbContext.Users.FindAsync(userId) == null)
+        if (await _dbContext.Users.FindAsync(_userRequestContext.UserId) == null)
             return Result<GroupDTO>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, OwnerUserId = userId };
+        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, OwnerUserId = _userRequestContext.UserId };
 
         await _dbContext.Groups.AddAsync(createdGroup);
         await _dbContext.SaveChangesAsync();
-        await _clientSyncService.AddUserToHubGroup(userId, createdGroup.Id);
+        await _clientSyncService.AddUserToHubGroup(_userRequestContext.UserId, createdGroup.Id);
 
         return Result<GroupDTO>.Success(_mapper.Map<GroupDTO>(createdGroup));
     }
 
-    public async Task<Result<string>> UpdateGroup(UpdateGroupDTO updateGroupDTO, int userId, int groupId)
+    public async Task<Result<string>> UpdateGroup(UpdateGroupDTO updateGroupDTO, int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
@@ -72,8 +78,8 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId);
+        bool isOwner = groupEntity.OwnerUserId == _userRequestContext.UserId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId);
         if (!isOwner && isShared)
         {
             return Result<string>.Error("A shared user can't update the details of a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -94,15 +100,15 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<string>.Success("Group updated.");
     }
 
-    public async Task<Result<string>> DeleteGroup(int userId, int groupId)
+    public async Task<Result<string>> DeleteGroup(int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         // Make sure the group exists
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null);
+        bool isOwner = groupEntity.OwnerUserId == _userRequestContext.UserId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null);
         if (!isOwner && isShared)
         {
             return Result<string>.Error("A shared user can't delete a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -117,18 +123,18 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<string>.Success("Group deleted.");
     }
 
-    // public async Task<Result<UserDTO>> AllowAccessToGroup(int groupId, int userId, List<string> usernamesToGrant, bool allowAccess)
+    // public async Task<Result<UserDTO>> AllowAccessToGroup(int groupId, , List<string> usernamesToGrant, bool allowAccess)
     // { ... }
 
-    public async Task<Result<List<UserDTO>>> GrantAccessToGroup(int groupId, int userId, List<string> usernamesToGrant)
+    public async Task<Result<List<UserDTO>>> GrantAccessToGroup(int groupId, List<string> usernamesToGrant)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<List<UserDTO>>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null);
+        bool isOwner = groupEntity.OwnerUserId == _userRequestContext.UserId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null);
         if (!isOwner && isShared)
         {
             return Result<List<UserDTO>>.Error("A shared user can't grant access to a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -146,7 +152,7 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         if (usersToGrant.Count != usernamesToGrant.Count)
             return Result<List<UserDTO>>.Error((usernamesToGrant.Count - usersToGrant.Count) + " Users do not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        if (usersToGrant.Any(u => u.Id == userId))
+        if (usersToGrant.Any(u => u.Id == _userRequestContext.UserId))
             return Result<List<UserDTO>>.Error("You can't grant access to yourself as the group owner.", ErrorCodes.OWNER_CANNOT_PERFORM_ACTION);
 
         foreach (UserEntity userToGrant in usersToGrant)
@@ -204,15 +210,15 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<List<UserDTO>>.Success([.. usersToGrant.Select(_mapper.Map<UserDTO>)]);
     }
 
-    public async Task<Result<string>> RevokeAccessToGroup(int groupId, int userId, List<string> usernamesToRevoke)
+    public async Task<Result<string>> RevokeAccessToGroup(int groupId, List<string> usernamesToRevoke)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null);
+        bool isOwner = groupEntity.OwnerUserId == _userRequestContext.UserId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null);
         if (!isOwner && isShared)
         {
             return Result<string>.Error("A shared user can't revoke access to a group they don't own", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -231,7 +237,7 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         if (usersToRevoke.Count != usernamesToRevoke.Count)
             return Result<string>.Error((usernamesToRevoke.Count - usersToRevoke.Count) + " Users do not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        if (usersToRevoke.Any(u => u.Id == userId))
+        if (usersToRevoke.Any(u => u.Id == _userRequestContext.UserId))
             return Result<string>.Error("You can't revoke access to yourself as the group owner.", ErrorCodes.OWNER_CANNOT_PERFORM_ACTION);
 
         foreach (UserEntity userToRevoke in usersToRevoke)
@@ -287,15 +293,15 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<string>.Success("Access revoked.");
     }
 
-    public async Task<Result<string>> LeaveGroup(int groupId, int userId)
+    public async Task<Result<string>> LeaveGroup(int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
 
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool isOwner = groupEntity.OwnerUserId == userId;
-        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == userId && m.KickedAt == null);
+        bool isOwner = groupEntity.OwnerUserId == _userRequestContext.UserId;
+        bool isShared = groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId && m.KickedAt == null);
 
         if (isOwner)
             return Result<string>.Error("Owners can't leave the group.", ErrorCodes.OWNER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -303,10 +309,10 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
             return Result<string>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
 
         // Getting the user leaving
-        UserEntity userLeaving = await _dbContext.Users.FirstAsync(u => u.Id == userId);
+        UserEntity userLeaving = await _dbContext.Users.FirstAsync(u => u.Id == _userRequestContext.UserId);
 
         // Removing the user from the group
-        groupEntity.GroupMembers.RemoveWhere(m => m.UserId == userId && m.GroupId == groupId);
+        groupEntity.GroupMembers.RemoveWhere(m => m.UserId == _userRequestContext.UserId && m.GroupId == groupId);
 
         // Marking the group as modified so it is queued to sync
         groupEntity.LastModifiedDate = DateTime.UtcNow;
@@ -328,13 +334,13 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         await _dbContext.SaveChangesAsync();
 
         // Removing the user from the hub group
-        await _clientSyncService.RemoveUserFromHubGroup(userId, groupEntity.Id);
+        await _clientSyncService.RemoveUserFromHubGroup(_userRequestContext.UserId, groupEntity.Id);
 
         // Sending a payload to the entire group members without kicked users, and updated tasks without that user assigned
         await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Tasks: assignedTasks));
 
         // Sending to the user leaving the group
-        await _clientSyncService.PushPayloadToPerson(userId, SyncPayload.FromEntity(DeletedGroupsIds: [groupEntity.Id]));
+        await _clientSyncService.PushPayloadToPerson(_userRequestContext.UserId, SyncPayload.FromEntity(DeletedGroupsIds: [groupEntity.Id]));
 
         return Result<string>.Success("User left group.");
     }

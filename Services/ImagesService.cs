@@ -1,20 +1,25 @@
 
 using SyncoraBackend.interfaces;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.Common;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class ImagesService(IImagesRepository imagesRepository)
+public class ImagesService(IImagesRepository imagesRepository, UserRequestContext userRequestContext)
 {
     private readonly IImagesRepository _imagesRepository = imagesRepository;
 
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
 
-    public async Task<Result<UploadSignature>> GenerateUploadSignature(int userId)
+
+
+    public async Task<Result<UploadSignature>> GenerateUploadSignature()
     {
         try
         {
-            UploadSignature signature = await _imagesRepository.GenerateUploadSignature(userId);
+
+            UploadSignature signature = await _imagesRepository.GenerateUploadSignature(_userRequestContext.UserId);
 
             return Result<UploadSignature>.Success(signature);
         }

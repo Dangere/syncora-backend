@@ -19,6 +19,7 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
     private readonly UsersService _usersService = usersService;
     private readonly ImagesService _imagesService = imagesService;
 
+
     [HttpGet("{username}")]
     public async Task<IActionResult> GetUser(string username)
     {
@@ -27,16 +28,15 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
         if (!result.IsSuccess)
             return this.ErrorResponse(result);
 
-        return Ok(result.Data!);
+        return Ok(result.Data);
     }
 
 
     [HttpGet("images/generate-signature")]
     public async Task<IActionResult> GetImageUploadSignature()
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<UploadSignature> result = await _imagesService.GenerateUploadSignature(userId);
+        Result<UploadSignature> result = await _imagesService.GenerateUploadSignature();
 
         if (!result.IsSuccess)
             return this.ErrorResponse(result);
@@ -49,32 +49,32 @@ public class UsersController(UsersService usersService, ImagesService imagesServ
     [HttpPost("images/profile/upload")]
     public async Task<IActionResult> UpdateProfileImage([FromBody] string imageUrl)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> result = await _usersService.UpdateUserProfilePicture(userId, imageUrl);
+
+        Result<string> result = await _usersService.UpdateUserProfilePicture(imageUrl);
 
         if (!result.IsSuccess)
             return this.ErrorResponse(result);
 
 
 
-        return Ok(result.Data!);
+        return Ok(result.Data);
     }
 
 
     [HttpPost("profile")]
     public async Task<IActionResult> UpdateProfileProfile([FromBody] UpdateUserProfileDTO updateUserProfileDTO)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> result = await _usersService.UpdateUserProfile(updateUserProfileDTO, userId);
+
+        Result<string> result = await _usersService.UpdateUserProfile(updateUserProfileDTO);
 
         if (!result.IsSuccess)
             return this.ErrorResponse(result);
 
 
 
-        return Ok(result.Data!);
+        return Ok(result.Data);
     }
 
 }

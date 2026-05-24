@@ -2,6 +2,7 @@ using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.DTOs.Sync;
 using SyncoraBackend.Models.DTOs.Users;
 using SyncoraBackend.Models.Entities;
@@ -9,13 +10,16 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class UsersService(ImagesService imagesService, ClientSyncService clientSyncService, SyncoraDbContext dbContext, ILogger<UsersService> logger, IMapper mapper)
+public class UsersService(ImagesService imagesService, ClientSyncService clientSyncService, SyncoraDbContext dbContext, ILogger<UsersService> logger, IMapper mapper, UserRequestContext userRequestContext)
 {
     private readonly ImagesService _imagesService = imagesService;
     private readonly ClientSyncService _clientSyncService = clientSyncService;
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly ILogger<UsersService> _logger = logger;
     private readonly IMapper _mapper = mapper;
+
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
+
 
 
     public async Task<Result<UserDTO>> GetUser(string username)
@@ -28,7 +32,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
         return new Result<UserDTO>(_mapper.Map<UserDTO>(user));
     }
 
-    public async Task<Result<string>> UpdateUserProfilePicture(int userId, string imageUrl)
+    public async Task<Result<string>> UpdateUserProfilePicture(string imageUrl)
     {
 
         // TODO: Validate image URL
@@ -37,7 +41,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
             return Result<string>.ErrorFrom(result);
 
         // Update user
-        UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == userId);
+        UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == _userRequestContext.UserId);
         if (user == null)
             return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
         user.ProfilePictureURL = imageUrl;
@@ -46,15 +50,15 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
 
         //  Notify users
-        await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(userId), SyncPayload.FromEntity(Users: [user]));
+        await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(_userRequestContext.UserId), SyncPayload.FromEntity(Users: [user]));
 
 
         return Result<string>.Success("Profile picture updated.");
     }
 
-    public async Task<Result<string>> UpdateUserProfile(UpdateUserProfileDTO updateUserProfileDTO, int userId)
+    public async Task<Result<string>> UpdateUserProfile(UpdateUserProfileDTO updateUserProfileDTO)
     {
-        UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == userId);
+        UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == _userRequestContext.UserId);
         if (user == null)
             return Result<string>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -82,7 +86,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
         // Notify users
         if (!updateUserProfileDTO.IsUpdatingPreferencesOnly)
-            await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(userId), SyncPayload.FromEntity(Users: [user]));
+            await _clientSyncService.PushPayloadToPeople(await GetRelatedUserIds(_userRequestContext.UserId), SyncPayload.FromEntity(Users: [user]));
         return Result<string>.Success("Profile updated.");
 
     }

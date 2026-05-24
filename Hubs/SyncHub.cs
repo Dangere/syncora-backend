@@ -2,18 +2,21 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 using SyncoraBackend.Attributes;
 using SyncoraBackend.Enums;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
 [AuthorizeRoles(UserRoles.User, UserRoles.Admin)]
-public class SyncHub(GroupsService groupService, UsersService usersService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager) : Hub
+public class SyncHub(GroupsService groupService, UsersService usersService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager, UserRequestContext userRequestContext) : Hub
 {
     private readonly GroupsService _groupService = groupService;
     private readonly UsersService _usersService = usersService;
 
     private readonly ILogger<SyncHub> _logger = logger;
     private readonly InMemoryHubConnectionManager _inMemoryConnectionManager = inMemoryConnectionManager;
+
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
 
 
     public override async Task OnConnectedAsync()
@@ -24,13 +27,15 @@ public class SyncHub(GroupsService groupService, UsersService usersService, ILog
         _logger.LogInformation("A client has connected, UserId: {UserId} DeviceId: {DeviceId}", userId, deviceId);
         _inMemoryConnectionManager.AddConnection(userId, Context.ConnectionId, deviceId ?? userId.ToString());
 
+        _userRequestContext.PopulateContext(userId, deviceId!);
+
         // Get the groups the user is in
-        List<GroupDTO> groups = await _groupService.GetGroups(userId);
+        List<int> groupIds = await _groupService.GetGroupIds();
 
         // Create / Add the user to the groups
-        foreach (GroupDTO group in groups)
+        foreach (int id in groupIds)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{group.Id}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{id}");
         }
 
         // // Get the related user ids 

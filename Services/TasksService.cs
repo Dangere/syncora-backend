@@ -19,14 +19,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
     private readonly UserRequestContext _userRequestContext = userRequestContext;
 
-    public async Task<Result<List<TaskDTO>>> GetTasks(int userId, int groupId, DateTime? sinceUtc = null)
+    public async Task<Result<List<TaskDTO>>> GetTasks(int groupId, DateTime? sinceUtc = null)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks.Where(t => t.DeletedAt == null)).Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<List<TaskDTO>>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        if (!(groupEntity.OwnerUserId == userId || groupEntity.GroupMembers.Any(m => m.UserId == userId)))
+        if (!(groupEntity.OwnerUserId == _userRequestContext.UserId || groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId)))
         {
             return Result<List<TaskDTO>>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
 
@@ -48,7 +48,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<List<TaskDTO>>.Success(tasksDTO);
     }
 
-    public async Task<Result<TaskDTO>> GetTask(int taskId, int userId, int groupId)
+    public async Task<Result<TaskDTO>> GetTask(int taskId, int groupId)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -59,7 +59,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         if (taskEntity == null)
             return Result<TaskDTO>.Error("Task does not exist.", ErrorCodes.TASK_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        bool hasAccess = groupEntity.OwnerUserId == userId || groupEntity.GroupMembers.Any(m => m.UserId == userId);
+        bool hasAccess = groupEntity.OwnerUserId == _userRequestContext.UserId || groupEntity.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId);
 
         if (!hasAccess)
             return Result<TaskDTO>.Error("User has no access to this task.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
@@ -67,10 +67,10 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     }
 
     // TODO(DONE): Change it so group members can complete tasks using this method or make a new method designed for that 
-    public async Task<Result<string>> UpdateTask(int taskId, int groupId, int userId, UpdateTaskDetailsDTO updatedTaskDTO)
+    public async Task<Result<string>> UpdateTask(int taskId, int groupId, UpdateTaskDetailsDTO updatedTaskDTO)
     {
 
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -82,7 +82,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Task does not exist.", ErrorCodes.TASK_NOT_FOUND, StatusCodes.Status404NotFound);
 
 
-        GroupAccess groupAccess = groupEntity.GetGroupAccess(userId);
+        GroupAccess groupAccess = groupEntity.GetGroupAccess(_userRequestContext.UserId);
         if (groupAccess == GroupAccess.Shared)
         {
             return Result<string>.Error("Only group owners can update tasks.", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -100,7 +100,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         //     // Im here realizing that this is not the best way to do this
         //     // We are basically checking twice if the task is completed as a bool and as a user id when we can only use the user id
         //     // taskEntity.Completed = updatedTaskDTO.Completed ?? taskEntity.Completed;
-        //     taskEntity.CompletedById = userId;
+        //     taskEntity.CompletedById = _userRequestContext.UserId;
         // }
 
 
@@ -114,9 +114,9 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Task updated.");
     }
 
-    public async Task<Result<string>> DeleteTask(int taskId, int groupId, int userId)
+    public async Task<Result<string>> DeleteTask(int taskId, int groupId)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -126,7 +126,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Task does not exist.", ErrorCodes.TASK_NOT_FOUND, StatusCodes.Status404NotFound);
 
 
-        GroupAccess groupAccess = groupEntity.GetGroupAccess(userId);
+        GroupAccess groupAccess = groupEntity.GetGroupAccess(_userRequestContext.UserId);
         if (groupAccess == GroupAccess.Shared)
         {
             return Result<string>.Error("Only group owners can delete tasks.", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -144,9 +144,9 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
     }
 
     // Assigns a list of users to a task
-    public async Task<Result<string>> AssignTaskTo(int taskId, int groupId, int userId, int[] userIdsToAssign)
+    public async Task<Result<string>> AssignTaskTo(int taskId, int groupId, int[] userIdsToAssign)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -159,7 +159,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
 
 
-        GroupAccess groupAccess = groupEntity.GetGroupAccess(userId);
+        GroupAccess groupAccess = groupEntity.GetGroupAccess(_userRequestContext.UserId);
         if (groupAccess == GroupAccess.Shared)
         {
             return Result<string>.Error("Only group owners can assign tasks.", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -189,9 +189,9 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Users assigned.");
     }
     // Directly sets a list of users to be assigned to a task
-    public async Task<Result<string>> SetAssignTaskToUsers(int taskId, int groupId, int userId, int[] assignedUsers)
+    public async Task<Result<string>> SetAssignTaskToUsers(int taskId, int groupId, int[] assignedUsers)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -204,7 +204,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
 
 
-        GroupAccess groupAccess = groupEntity.GetGroupAccess(userId);
+        GroupAccess groupAccess = groupEntity.GetGroupAccess(_userRequestContext.UserId);
         if (groupAccess == GroupAccess.Shared)
         {
             return Result<string>.Error("Only group owners can assign tasks.", ErrorCodes.SHARED_USER_CANNOT_PERFORM_ACTION, StatusCodes.Status403Forbidden);
@@ -235,9 +235,9 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Users set assigned.");
     }
 
-    public async Task<Result<string>> MarkTaskForUser(int taskId, int groupId, int userId, bool isCompleted)
+    public async Task<Result<string>> MarkTaskForUser(int taskId, int groupId, bool isCompleted)
     {
-        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null && (g.OwnerUserId == userId || g.GroupMembers.Any(m => m.UserId == userId)));
+        GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null && (g.OwnerUserId == _userRequestContext.UserId || g.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId)));
         if (groupEntity == null)
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 
@@ -247,14 +247,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Task does not exist.", ErrorCodes.TASK_NOT_FOUND, StatusCodes.Status404NotFound);
 
 
-        if (groupEntity.OwnerUserId != userId && taskEntity.AssignedTo.FirstOrDefault(u => u.Id == userId) == null)
+        if (groupEntity.OwnerUserId != _userRequestContext.UserId && taskEntity.AssignedTo.FirstOrDefault(u => u.Id == _userRequestContext.UserId) == null)
         {
             return Result<string>.Error("User is not assigned to this task.", ErrorCodes.USER_NOT_ASSIGNED_TO_TASK, StatusCodes.Status403Forbidden);
         }
 
 
         taskEntity.LastModifiedDate = DateTime.UtcNow;
-        taskEntity.CompletedById = isCompleted ? userId : null;
+        taskEntity.CompletedById = isCompleted ? _userRequestContext.UserId : null;
 
 
         await _dbContext.SaveChangesAsync();
@@ -263,13 +263,13 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Task marked.");
     }
 
-    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int userId, int groupId)
+    public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int groupId)
     {
         Console.WriteLine(_userRequestContext.UserId);
         Console.WriteLine(_userRequestContext.DeviceId);
 
 
-        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == userId && g.DeletedAt == null);
+        GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<TaskDTO>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);
 

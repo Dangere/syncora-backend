@@ -21,9 +21,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTasks(int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasks(userId, groupId);
+        Result<List<TaskDTO>> tasksFetchResult = await _taskService.GetTasks(groupId);
 
         if (!tasksFetchResult.IsSuccess)
             return this.ErrorResponse(tasksFetchResult);
@@ -36,9 +35,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     [HttpGet("{taskId}", Name = _getTaskEndpointName)]
     public async Task<IActionResult> GetTask(int taskId, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<TaskDTO> fetchResult = await _taskService.GetTask(taskId, userId, groupId);
+        Result<TaskDTO> fetchResult = await _taskService.GetTask(taskId, groupId);
 
         if (!fetchResult.IsSuccess)
             return this.ErrorResponse(fetchResult);
@@ -50,9 +48,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     [HttpPost()]
     public async Task<IActionResult> CreateTask([FromBody] CreateTaskDTO newTaskDTO, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<TaskDTO> createdResult = await _taskService.CreateTask(newTaskDTO, userId, groupId);
+        Result<TaskDTO> createdResult = await _taskService.CreateTask(newTaskDTO, groupId);
 
         if (!createdResult.IsSuccess)
             return this.ErrorResponse(createdResult);
@@ -64,9 +61,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     [HttpPut("{taskId}")]
     public async Task<IActionResult> UpdateTask([FromBody] UpdateTaskDetailsDTO updatedTaskDTO, int taskId, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> updateResult = await _taskService.UpdateTask(taskId, groupId, userId, updatedTaskDTO);
+        Result<string> updateResult = await _taskService.UpdateTask(taskId, groupId, updatedTaskDTO);
 
         if (!updateResult.IsSuccess)
             return this.ErrorResponse(updateResult);
@@ -80,9 +76,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/assign?ids=1&ids=2&ids=3
     public async Task<IActionResult> AssignTask([FromQuery] int[] ids, int taskId, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> assignResults = await _taskService.AssignTaskTo(taskId, groupId, userId, ids);
+        Result<string> assignResults = await _taskService.AssignTaskTo(taskId, groupId, ids);
 
         if (!assignResults.IsSuccess)
             return this.ErrorResponse(assignResults);
@@ -96,9 +91,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/set-assign?ids=1&ids=2&ids=3
     public async Task<IActionResult> SetAssignTask([FromQuery] int[] ids, int taskId, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> assignResults = await _taskService.SetAssignTaskToUsers(taskId, groupId, userId, ids);
+        Result<string> assignResults = await _taskService.SetAssignTaskToUsers(taskId, groupId, ids);
 
         if (!assignResults.IsSuccess)
             return this.ErrorResponse(assignResults);
@@ -110,9 +104,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     // ENDPOINT: /api/groups/{groupId}/tasks/{taskId}/mark?isDone=true
     public async Task<IActionResult> MarkTask(int taskId, int groupId, [FromQuery] bool isDone = true)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> updateResult = await _taskService.MarkTaskForUser(taskId, groupId, userId, isDone);
+        Result<string> updateResult = await _taskService.MarkTaskForUser(taskId, groupId, isDone);
 
         if (!updateResult.IsSuccess)
             return this.ErrorResponse(updateResult);
@@ -124,9 +117,8 @@ public class TasksController(TasksService taskService) : ControllerBase
     [HttpDelete("{taskId}")]
     public async Task<IActionResult> DeleteTask(int taskId, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> deleteResult = await _taskService.DeleteTask(taskId, groupId, userId);
+        Result<string> deleteResult = await _taskService.DeleteTask(taskId, groupId);
 
         if (!deleteResult.IsSuccess)
             return this.ErrorResponse(deleteResult);

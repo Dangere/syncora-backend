@@ -20,9 +20,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpGet()]
     public async Task<IActionResult> GetGroups()
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        List<GroupDTO> groups = await _groupService.GetGroups(userId);
+        List<GroupDTO> groups = await _groupService.GetGroups();
 
 
         return Ok(groups);
@@ -31,9 +30,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpGet("{groupId}", Name = _getGroupEndpointName)]
     public async Task<IActionResult> GetGroup(int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<GroupDTO> fetchResult = await _groupService.GetGroup(userId, groupId);
+        Result<GroupDTO> fetchResult = await _groupService.GetGroup(groupId);
 
         if (!fetchResult.IsSuccess)
             return this.ErrorResponse(fetchResult);
@@ -44,9 +42,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost()]
     public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDTO createGroupDTO)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<GroupDTO> createResult = await _groupService.CreateGroup(createGroupDTO, userId);
+        Result<GroupDTO> createResult = await _groupService.CreateGroup(createGroupDTO);
 
         if (!createResult.IsSuccess)
             return this.ErrorResponse(createResult);
@@ -57,9 +54,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPut("{groupId}")]
     public async Task<IActionResult> UpdateGroup([FromBody] UpdateGroupDTO updateGroupDTO, int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> updateResult = await _groupService.UpdateGroup(updateGroupDTO, userId, groupId);
+        Result<string> updateResult = await _groupService.UpdateGroup(updateGroupDTO, groupId);
 
         if (!updateResult.IsSuccess)
             return this.ErrorResponse(updateResult);
@@ -70,9 +66,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpDelete("{groupId}")]
     public async Task<IActionResult> DeleteGroup(int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> deleteResult = await _groupService.DeleteGroup(userId, groupId);
+        Result<string> deleteResult = await _groupService.DeleteGroup(groupId);
 
         if (!deleteResult.IsSuccess)
             return this.ErrorResponse(deleteResult);
@@ -83,9 +78,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost("{groupId}/grant-access")]
     public async Task<IActionResult> GrantAccessToGroup(int groupId, List<string> usernames)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<List<UserDTO>> grantResult = await _groupService.GrantAccessToGroup(groupId, userId, usernames);
+        Result<List<UserDTO>> grantResult = await _groupService.GrantAccessToGroup(groupId, usernames);
 
         if (!grantResult.IsSuccess)
             return this.ErrorResponse(grantResult);
@@ -96,9 +90,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost("{groupId}/revoke-access")]
     public async Task<IActionResult> RevokeAccessToGroup(int groupId, List<string> usernames)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> revokeResult = await _groupService.RevokeAccessToGroup(groupId, userId, usernames);
+        Result<string> revokeResult = await _groupService.RevokeAccessToGroup(groupId, usernames);
 
         if (!revokeResult.IsSuccess)
             return this.ErrorResponse(revokeResult);
@@ -112,9 +105,8 @@ public class GroupsController(GroupsService groupService) : ControllerBase
     [HttpPost("{groupId}/leave")]
     public async Task<IActionResult> LeaveGroup(int groupId)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        Result<string> revokeResult = await _groupService.LeaveGroup(groupId, userId);
+        Result<string> revokeResult = await _groupService.LeaveGroup(groupId);
 
         if (!revokeResult.IsSuccess)
             return this.ErrorResponse(revokeResult);
