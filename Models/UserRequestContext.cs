@@ -2,28 +2,25 @@ namespace SyncoraBackend.Models;
 
 public class UserRequestContext
 {
-    public int UserId => userId == null ? throw new InvalidOperationException("UserId value is null on user request context.") : userId.Value;
-    public string DeviceId { get; private set; } = "";
+    /// <summary>
+    /// If the request isn't authenticated, the UserId will throw 
+    /// </summary>
+    public int UserId => userId ?? throw new InvalidOperationException("Unauthenticated user.");
 
     /// <summary>
-    /// If the request isn't authenticated, the userId will be null
+    /// If the request isn't authenticated, the DeviceId will throw
     /// </summary>
+    public string DeviceId => deviceId ?? throw new InvalidOperationException("Unauthenticated user.");
+
     private int? userId;
+    private string? deviceId;
+
 
 
 
     public void PopulateContext(int? userId, string deviceId)
     {
         this.userId = userId;
-        DeviceId = deviceId;
-
-
-    }
-
-
-    public void Print()
-    {
-        Console.WriteLine($"stored userId is {userId}, deviceId is {this.DeviceId}");
-
+        this.deviceId = deviceId;
     }
 }

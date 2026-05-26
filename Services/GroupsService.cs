@@ -61,7 +61,7 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         if (await _dbContext.Users.FindAsync(_userRequestContext.UserId) == null)
             return Result<GroupDTO>.Error("User does not exist.", ErrorCodes.USER_NOT_FOUND, StatusCodes.Status404NotFound);
 
-        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, CreationDate = DateTime.UtcNow, LastModifiedDate = DateTime.UtcNow, OwnerUserId = _userRequestContext.UserId };
+        GroupEntity createdGroup = new() { Title = createGroupDTO.Title, Description = createGroupDTO.Description, OwnerUserId = _userRequestContext.UserId };
 
         await _dbContext.Groups.AddAsync(createdGroup);
         await _dbContext.SaveChangesAsync();

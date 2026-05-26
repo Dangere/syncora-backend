@@ -14,7 +14,7 @@ public class GroupEntity
     public required string Title { get; set; }
     public string? Description { get; set; }
     [Required]
-    public required DateTime CreationDate { get; set; }
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     [Required]
     public required int OwnerUserId { get; set; }
@@ -26,7 +26,7 @@ public class GroupEntity
     public HashSet<TaskEntity> Tasks { get; } = [];
 
     [Required]
-    public required DateTime LastModifiedDate { get; set; }
+    public DateTime LastModifiedDate { get; set; } = DateTime.UtcNow;
 
     public DateTime? DeletedAt { get; set; } = null;
 

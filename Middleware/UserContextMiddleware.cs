@@ -22,8 +22,17 @@ class UserContextMiddleware(RequestDelegate next, ILogger<UserContextMiddleware>
             return;
         }
 
+        bool hasUserId = int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out int userId);
+
+        // Letting anonymous users pass through
+        if (!hasUserId)
+        {
+            await _next(context);
+            return;
+        }
+
         bool hasDeviceIdHeader = context.Request.Headers.TryGetValue("Device-Id", out var deviceId);
-        if (hasDeviceIdHeader == false)
+        if (!hasDeviceIdHeader)
         {
             context.Response.StatusCode = 400;
             context.Response.ContentType = "application/json";
@@ -32,10 +41,9 @@ class UserContextMiddleware(RequestDelegate next, ILogger<UserContextMiddleware>
             return;
         }
 
-        bool hasUserId = int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out int userId);
 
 
-        requestContext.PopulateContext(hasUserId ? userId : null, deviceId!);
+        requestContext.PopulateContext(userId, deviceId!);
 
         await _next(context);
     }

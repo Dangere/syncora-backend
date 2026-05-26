@@ -20,6 +20,9 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens { get; set; }
     public DbSet<ReportEntity> Reports { get; set; }
 
+    public DbSet<AdminActionEntity> AdminActions { get; set; }
+
+
 
 
 
@@ -46,8 +49,6 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
         modelBuilder.Entity<UserEntity>().HasMany(u => u.RefreshTokens).WithOne(rt => rt.User).HasForeignKey(rf => rf.UserId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<ReportEntity>().HasOne(r => r.User).WithMany(u => u.Reports).HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
-
-
 
 
         // The report entity will never be updated once inserted, so the value comparer is set to no-op

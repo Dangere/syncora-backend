@@ -1,3 +1,4 @@
+
 namespace SyncoraBackend.Hubs;
 
 public class InMemoryHubConnectionManager
@@ -45,5 +46,14 @@ public class InMemoryHubConnectionManager
         {
             return [.. userIds.SelectMany(userId => _connections.TryGetValue(userId, out var conns) ? conns.Where(c => c.DeviceId != excludeDeviceId).Select(c => c.ConnectionId) : [])];
         }
+    }
+
+    internal string? GetConnectionIdForDevice(string deviceId)
+    {
+        lock (_connections)
+        {
+            return _connections.SelectMany(c => c.Value).Where(c => c.DeviceId == deviceId).Select(c => c.ConnectionId).FirstOrDefault();
+        }
+
     }
 }

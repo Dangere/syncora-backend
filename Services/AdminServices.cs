@@ -5,16 +5,18 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
 
-public class AdminServices(SyncoraDbContext dbContext)
+public class AdminServices(SyncoraDbContext dbContext, UserRequestContext userRequestContext)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
 
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
 
     public async Task<Result<string>> UpdateUserPassword(string username, string newPassword)
     {
@@ -39,6 +41,10 @@ public class AdminServices(SyncoraDbContext dbContext)
             // Update user password and salt
             user.Salt = salt;
             user.Hash = passwordHash;
+
+            await _dbContext.AdminActions.AddAsync(new AdminActionEntity { Action = "Password updated for user id " + user.Id + ".", AdminId = _userRequestContext.UserId, });
+
+
 
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();

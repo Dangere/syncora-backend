@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SyncoraBackend.Data;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Hubs;
+using SyncoraBackend.Models;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Models.DTOs.Sync;
 using SyncoraBackend.Models.DTOs.Tasks;
@@ -14,13 +15,15 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, ILogger<ClientSyncService> logger, InMemoryHubConnectionManager connectionManager)
+public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, ILogger<ClientSyncService> logger, InMemoryHubConnectionManager connectionManager, UserRequestContext userRequestContext)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
     private readonly IHubContext<SyncHub> _hubContext = hubContext;
     private readonly ILogger<ClientSyncService> _logger = logger;
 
     private readonly InMemoryHubConnectionManager _connectionManager = connectionManager;
+    private readonly UserRequestContext _userRequestContext = userRequestContext;
+
 
     // The sync method will return a data batch to the client
     // When its the first time the client is syncing (i.e logging in), it will get all the data using an old 'since' timestamp
@@ -88,20 +91,42 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
     // This method is used to push event based updates to all users related to a userId
     // For example, its used when a user updates their profile and wants to notify other users in other groups
     // While handling deduplication of connection IDs
-    public async Task PushPayloadToPeople(List<int> userIds, SyncPayload payload)
+    public async Task PushPayloadToPeople(List<int> userIds, SyncPayload payload, bool excludeFiringDevice = true)
     {
         _logger.LogInformation("Sending sync payload to {UserIds}", userIds);
+        List<string> connections = _connectionManager.GetConnectionsForUsers(userIds).ToList();
 
-        IReadOnlyList<string> connections = _connectionManager.GetConnectionsForUsers(userIds);
+
+        if (excludeFiringDevice)
+        {
+            string? connectionToExclude = _connectionManager.GetConnectionIdForDevice(_userRequestContext.DeviceId);
+            if (connectionToExclude != null)
+                connections.Remove(connectionToExclude);
+        }
+
+
 
         await _hubContext.Clients.Clients(connections).SendAsync("ReceiveSync", payload);
 
     }
 
     // This method is used to push event based updates to clients
-    public async Task PushPayloadToGroup(int groupId, SyncPayload payload)
+    public async Task PushPayloadToGroup(int groupId, SyncPayload payload, bool excludeFiringDevice = true)
     {
         _logger.LogInformation("Sending sync payload");
+
+        if (excludeFiringDevice)
+        {
+            string? connectionToExclude = _connectionManager.GetConnectionIdForDevice(_userRequestContext.DeviceId);
+            if (connectionToExclude != null)
+            {
+                await _hubContext.Clients.GroupExcept($"group-{groupId}", connectionToExclude).SendAsync("ReceiveSync", payload);
+                return;
+            }
+        }
+
+
+
         await _hubContext.Clients.Groups($"group-{groupId}").SendAsync("ReceiveSync", payload);
     }
 
