@@ -12,11 +12,13 @@ using SyncoraBackend.Utilities;
 namespace SyncoraBackend.Services;
 
 
-public class AdminServices(SyncoraDbContext dbContext, UserRequestContext userRequestContext)
+public class AdminServices(SyncoraDbContext dbContext, UserRequestContext userRequestContext, ILogger<AdminServices> logger)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;
 
     private readonly UserRequestContext _userRequestContext = userRequestContext;
+
+    private readonly ILogger<AdminServices> _logger = logger;
 
     public async Task<Result<string>> UpdateUserPassword(string username, string newPassword)
     {
@@ -49,8 +51,9 @@ public class AdminServices(SyncoraDbContext dbContext, UserRequestContext userRe
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Failed to update user password.");
             await transaction.RollbackAsync();
             return Result<string>.Error("Failed to update user password.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }

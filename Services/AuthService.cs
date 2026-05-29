@@ -14,7 +14,7 @@ using System.Net;
 namespace SyncoraBackend.Services;
 
 public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration
-, ClientSyncService clientSyncService)
+, ClientSyncService clientSyncService, ILogger<AuthService> logger)
 {
     private readonly IMapper _mapper = mapper;
     private readonly SyncoraDbContext _dbContext = dbContext;
@@ -23,6 +23,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     private readonly IConfiguration _config = configuration;
 
     private readonly ClientSyncService _clientSyncService = clientSyncService;
+    private readonly ILogger<AuthService> _logger = logger;
 
 
     // You should NOT create an access token from a username/password request.
@@ -110,6 +111,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
         catch (Exception e)
         {
+            _logger.LogError(e, "Google token validation failed.");
             return Result<AuthenticationResponseDTO>.Error(e.Message, ErrorCodes.INVALID_GOOGLE_TOKEN);
         }
 
@@ -144,6 +146,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
         catch (Exception e)
         {
+            _logger.LogError(e, "Google token validation failed.");
+
             return Result<AuthenticationResponseDTO>.Error(e.Message, ErrorCodes.INVALID_GOOGLE_TOKEN);
         }
 
@@ -241,9 +245,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             // when disposed if either commands fails
             await transaction.CommitAsync();
         }
-        catch (Exception)
+        catch (Exception e)
         {
             await transaction.RollbackAsync();
+            _logger.LogError(e, "Failed to verify user.");
+
             return Result<string>.Error("Failed to verify user.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
@@ -260,6 +266,7 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         }
         catch (Exception e)
         {
+            _logger.LogError(e, "Token validation failed.");
             return Result<TokensDTO>.Error(e.Message, ErrorCodes.INVALID_TOKEN, StatusCodes.Status401Unauthorized);
         }
 
@@ -378,8 +385,9 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Failed to update user password.");
             await transaction.RollbackAsync();
             return Result<string>.Error("Failed to update user password.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }

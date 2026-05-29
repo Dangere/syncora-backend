@@ -6,11 +6,13 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-public class ImagesService(IImagesRepository imagesRepository, UserRequestContext userRequestContext)
+public class ImagesService(IImagesRepository imagesRepository, UserRequestContext userRequestContext, ILogger<ImagesService> logger)
 {
     private readonly IImagesRepository _imagesRepository = imagesRepository;
 
     private readonly UserRequestContext _userRequestContext = userRequestContext;
+
+    private readonly ILogger<ImagesService> _logger = logger;
 
 
 
@@ -23,8 +25,9 @@ public class ImagesService(IImagesRepository imagesRepository, UserRequestContex
 
             return Result<UploadSignature>.Success(signature);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Failed to generate upload signature.");
             return Result<UploadSignature>.Error("Failed to generate upload signature.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
@@ -39,8 +42,9 @@ public class ImagesService(IImagesRepository imagesRepository, UserRequestContex
 
             return Result<string>.Success(imageUrl);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Failed to add photo.");
             return Result<string>.Error("Failed to add photo.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
     }
@@ -50,10 +54,11 @@ public class ImagesService(IImagesRepository imagesRepository, UserRequestContex
     {
         try
         {
-            return Result<bool>.Success(await _imagesRepository.ValidateUrlString(url));
+            return Result<bool>.Success(_imagesRepository.ValidateUrlString(url));
         }
-        catch (System.Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Invalid image URL.");
             return Result<bool>.Error("Invalid image URL.", ErrorCodes.INVALID_URL);
         }
     }

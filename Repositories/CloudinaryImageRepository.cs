@@ -41,8 +41,8 @@ public class CloudinaryImageRepository(Cloudinary cloudinary) : IImagesRepositor
         return Task.FromResult(new UploadSignature(profileSignature, uploadParams.ToParamsDictionary().ToDictionary()));
     }
 
-    public Task<bool> ValidateUrlString(string url)
+    public bool ValidateUrlString(string url)
     {
-        return Task.FromResult(true);
+        return url.StartsWith("http://res.cloudinary.com/dpo5aj891/image", StringComparison.OrdinalIgnoreCase);
     }
 }
