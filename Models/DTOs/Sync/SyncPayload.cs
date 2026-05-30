@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using SyncoraBackend.Middleware;
+using SyncoraBackend.Data;
 using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Models.DTOs.Tasks;
 using SyncoraBackend.Models.DTOs.Users;

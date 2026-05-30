@@ -33,7 +33,7 @@ builder.Services.AddScoped<UsersService>();
 builder.Services.AddScoped<ClientSyncService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<UsersService>();
-builder.Services.AddScoped<IImagesRepository>(provider => new CloudinaryImageRepository(provider.GetRequiredService<Cloudinary>()));
+builder.Services.AddScoped<IImagesRepository>(provider => new CloudinaryImageRepository(provider.GetRequiredService<Cloudinary>(), provider.GetRequiredService<IConfiguration>()));
 builder.Services.AddScoped<ImagesService>();
 builder.Services.AddScoped<ReportServices>();
 
