@@ -1,7 +1,11 @@
 using System.Security.Claims;
 using System.Text.Json;
 using SyncoraBackend.Models;
-
+/// <summary>
+///     Middleware used to extract the user id and device id from the request and store them in the request context for scoped services to use
+/// </summary>
+/// <param name="next"></param>
+/// <param name="logger"></param>
 class UserContextMiddleware(RequestDelegate next, ILogger<UserContextMiddleware> logger)
 {
     private readonly RequestDelegate _next = next;
@@ -31,7 +35,10 @@ class UserContextMiddleware(RequestDelegate next, ILogger<UserContextMiddleware>
             return;
         }
 
+
         bool hasDeviceIdHeader = context.Request.Headers.TryGetValue("Device-Id", out var deviceId);
+
+        // If the device id header is missing from any authenticated request, return a 400
         if (!hasDeviceIdHeader)
         {
             context.Response.StatusCode = 400;

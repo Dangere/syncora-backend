@@ -12,19 +12,12 @@ public class SyncoraDbContext(DbContextOptions<SyncoraDbContext> options) : DbCo
     public DbSet<TaskEntity> Tasks { get; set; }
     public DbSet<GroupEntity> Groups { get; set; }
     public DbSet<GroupMemberEntity> GroupMembers { get; set; }
-
     public DbSet<DeletedRecord> DeletedRecords { get; set; }
-
     public DbSet<RefreshTokenEntity> RefreshTokens { get; set; }
     public DbSet<VerificationTokenEntity> VerificationTokens { get; set; }
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens { get; set; }
     public DbSet<ReportEntity> Reports { get; set; }
-
     public DbSet<AdminActionEntity> AdminActions { get; set; }
-
-
-
-
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

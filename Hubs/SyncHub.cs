@@ -7,11 +7,18 @@ using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Services;
 namespace SyncoraBackend.Hubs;
 
+/// <summary>
+///     SyncHub used to add users to signalR groups' hubs
+/// </summary>
+/// <param name="groupService"></param>
+/// <param name="usersService"></param>
+/// <param name="logger"></param>
+/// <param name="inMemoryConnectionManager"></param>
+/// <param name="userRequestContext"></param>
 [AuthorizeRoles(UserRoles.User, UserRoles.Admin)]
-public class SyncHub(GroupsService groupService, UsersService usersService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager, UserRequestContext userRequestContext) : Hub
+public class SyncHub(GroupsService groupService, ILogger<SyncHub> logger, InMemoryHubConnectionManager inMemoryConnectionManager, UserRequestContext userRequestContext) : Hub
 {
     private readonly GroupsService _groupService = groupService;
-    private readonly UsersService _usersService = usersService;
 
     private readonly ILogger<SyncHub> _logger = logger;
     private readonly InMemoryHubConnectionManager _inMemoryConnectionManager = inMemoryConnectionManager;
@@ -37,15 +44,6 @@ public class SyncHub(GroupsService groupService, UsersService usersService, ILog
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"group-{id}");
         }
-
-        // // Get the related user ids 
-        // List<int> relatedUserIds = await _usersService.GetRelatedUserIds(userId);
-
-        // // Create / Join the related users groups
-        // foreach (int relatedUserId in relatedUserIds)
-        // {
-        //     await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{relatedUserId}");
-        // }
 
 
         await base.OnConnectedAsync();

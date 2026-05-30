@@ -10,7 +10,11 @@ using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     Report services, used by the client to report automatically or manually errors or bugs manually 
+/// </summary>
+/// <param name="mapper"></param>
+/// <param name="dbContext"></param>
 public class ReportServices(IMapper mapper, SyncoraDbContext dbContext)
 {
     private readonly IMapper _mapper = mapper;

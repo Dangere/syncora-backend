@@ -5,7 +5,13 @@ using SyncoraBackend.Services;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Pages.Auth;
-
+/// <summary>
+///     Password reset razor page
+///     Opened through a link sent to the user to reset a user's password
+///     The linked in their email already contains the reset token in the query string
+/// </summary>
+/// <param name="logger"></param>
+/// <param name="authService"></param>
 public class PasswordResetModel(ILogger<PasswordResetModel> logger, AuthService authService) : PageModel
 {
     private readonly ILogger<PasswordResetModel> _logger = logger;

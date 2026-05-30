@@ -4,12 +4,23 @@ using MimeKit;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     Email service used to send emails
+/// </summary>
+/// <param name="configuration"></param>
+/// <param name="logger"></param>
 public class EmailService(IConfiguration configuration, ILogger<EmailService> logger)
 {
     private readonly IConfiguration _config = configuration;
     private readonly ILogger<EmailService> _logger = logger;
 
+    /// <summary>
+    ///     Sends a verification email containing a url with the raw verification token 
+    /// </summary>
+    /// <param name="toUsername"></param>
+    /// <param name="toEmail"></param>
+    /// <param name="url"></param>
+    /// <returns></returns>
     public async Task<Result<string>> SendVerificationEmail(string toUsername, string toEmail, string url)
     {
         // Validate URL
@@ -66,6 +77,13 @@ public class EmailService(IConfiguration configuration, ILogger<EmailService> lo
 
     }
 
+    /// <summary>
+    ///     Sends a verification email containing a url with the raw verification token
+    /// </summary>
+    /// <param name="toUsername"></param>
+    /// <param name="toEmail"></param>
+    /// <param name="url"></param>
+    /// <returns></returns>
     public async Task<Result<string>> SendResetPasswordEmail(string toUsername, string toEmail, string url)
     {
         // Validate URL

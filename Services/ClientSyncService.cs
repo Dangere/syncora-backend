@@ -14,7 +14,14 @@ using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     ClientSyncService used to sync data between the client and the server 
+/// </summary>
+/// <param name="dbContext"></param>
+/// <param name="hubContext"></param>
+/// <param name="logger"></param>
+/// <param name="connectionManager"></param>
+/// <param name="userRequestContext"></param>
 public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> hubContext, ILogger<ClientSyncService> logger, InMemoryHubConnectionManager connectionManager, UserRequestContext userRequestContext)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;

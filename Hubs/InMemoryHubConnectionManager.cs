@@ -1,6 +1,10 @@
 
 namespace SyncoraBackend.Hubs;
 
+/// <summary>
+///     In memory hub connection manager
+///     Used to store the connections ids and device ids in relation to each user
+/// </summary>
 public class InMemoryHubConnectionManager
 {
     // Dictionary<UserId, HashSet<ConnectionId, DeviceId>>

@@ -1,5 +1,10 @@
 using System.Text.Json;
 
+/// <summary>
+///     Middleware used to handle exceptions
+/// </summary>
+/// <param name="next"></param>
+/// <param name="logger"></param>
 class ExceptionHandlerMiddleware(RequestDelegate next, ILogger<ExceptionHandlerMiddleware> logger)
 {
     private readonly RequestDelegate _next = next;

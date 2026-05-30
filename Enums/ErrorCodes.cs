@@ -8,6 +8,7 @@ public enum ErrorCodes
 
     // Task errors
     TASK_NOT_FOUND,
+    TASK_DETAILS_UNCHANGED,
 
 
     // Access / permission errors

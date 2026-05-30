@@ -11,7 +11,14 @@ using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     Groups service used to manage groups
+/// </summary>
+/// <param name="mapper"></param>
+/// <param name="logger"></param>
+/// <param name="dbContext"></param>
+/// <param name="clientSyncService"></param>
+/// <param name="userRequestContext"></param>
 public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, SyncoraDbContext dbContext, ClientSyncService clientSyncService, UserRequestContext userRequestContext)
 {
     private readonly IMapper _mapper = mapper;
@@ -33,7 +40,6 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<GroupDTO>.Error("User has no access to this group.", ErrorCodes.ACCESS_DENIED, StatusCodes.Status403Forbidden);
     }
 
-    // TODO: Add pagination
     // Returns groups owned by the user or shared with the user
     public async Task<List<GroupDTO>> GetGroups()
     {
@@ -43,7 +49,8 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
 
     }
     /// <summary>
-    /// Returns groups ids owned by the user or shared with the user
+    ///     Returns groups ids owned by the user or shared with the user
+    ///     Mainly used for syncing
     /// </summary>
     /// <param name="sinceUtc"></param>
     /// <returns></returns>
@@ -55,6 +62,12 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
 
     }
 
+
+    /// <summary>
+    ///     Creates a new group and adds the user to it's signalR hub
+    /// </summary>
+    /// <param name="createGroupDTO"></param>
+    /// <returns></returns>
     public async Task<Result<GroupDTO>> CreateGroup(CreateGroupDTO createGroupDTO)
     {
         // Make sure the user exists
@@ -69,7 +82,14 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
 
         return Result<GroupDTO>.Success(_mapper.Map<GroupDTO>(createdGroup));
     }
-
+    /// <summary>
+    ///     Updates a group's title and description. Only the group owner can modify these details
+    ///     Returns an error if the group details are the same
+    ///     Also pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="updateGroupDTO"></param>
+    /// <param name="groupId"></param>
+    /// <returns></returns>
     public async Task<Result<string>> UpdateGroup(UpdateGroupDTO updateGroupDTO, int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -99,7 +119,12 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
 
         return Result<string>.Success("Group updated.");
     }
-
+    /// <summary>
+    ///     Deletes a group and all of its tasks. Only the group owner can modify these details
+    ///     Also pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="groupId"></param>
+    /// <returns></returns>
     public async Task<Result<string>> DeleteGroup(int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).ThenInclude(m => m.User).FirstOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -123,9 +148,15 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         return Result<string>.Success("Group deleted.");
     }
 
-    // public async Task<Result<UserDTO>> AllowAccessToGroup(int groupId, , List<string> usernamesToGrant, bool allowAccess)
-    // { ... }
-
+    /// <summary>
+    ///     Grants access to a group. Takes a list of usernames and adds them to the group. Only the group owner add people
+    ///     If some users dont exist, it returns an error
+    ///     If the user is already in the group, it returns an error
+    ///     Also pushes a sync payload to all connected clients and new added users on success
+    /// </summary>
+    /// <param name="groupId"></param>
+    /// <param name="usernamesToGrant"></param>
+    /// <returns></returns>
     public async Task<Result<List<UserDTO>>> GrantAccessToGroup(int groupId, List<string> usernamesToGrant)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).Include(g => g.OwnerUser).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -209,7 +240,17 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         }
         return Result<List<UserDTO>>.Success([.. usersToGrant.Select(_mapper.Map<UserDTO>)]);
     }
-
+    /// <summary>
+    ///     Revokes access to a group. Takes a list of usernames and revokes them from the group. Only the group owner can revoke people
+    ///     If the user is not in the group, it returns an error
+    ///     If the user was already revoked, it returns an error
+    ///     Removes the revoked users from their tasks' assignees and completion to them
+    ///     Also pushes a sync payload to all connected clients on success excluding the revoked users
+    ///     The removed users get sent a sync payload with the group they were revoked from
+    /// </summary>
+    /// <param name="groupId"></param>
+    /// <param name="usernamesToRevoke"></param>
+    /// <returns></returns>
     public async Task<Result<string>> RevokeAccessToGroup(int groupId, List<string> usernamesToRevoke)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -292,7 +333,13 @@ public class GroupsService(IMapper mapper, ILogger<GroupsService> logger, Syncor
         await _clientSyncService.PushPayloadToGroup(groupEntity.Id, SyncPayload.FromEntity(Groups: [groupEntity.ExcludeKickedUsers()], Tasks: assignedTasks));
         return Result<string>.Success("Access revoked.");
     }
-
+    /// <summary>
+    ///     Leaves a group. Only the group members can leave a group
+    ///     Removes the user from their tasks' assignees and completion to them
+    ///     Also pushes a sync payload to all connected clients on success excluding the user
+    /// </summary>
+    /// <param name="groupId"></param>
+    /// <returns></returns>
     public async Task<Result<string>> LeaveGroup(int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);

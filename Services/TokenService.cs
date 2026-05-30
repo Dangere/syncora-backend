@@ -9,18 +9,28 @@ using SyncoraBackend.Models.Entities;
 using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     Token service used to generate tokens for authentication and verification
+/// </summary>
+/// <param name="configuration"></param>
 public class TokenService(IConfiguration configuration)
 {
     private readonly IConfiguration _config = configuration;
+
+    /// <summary>
+    ///     Generates a JWT access token for the user holding the claims below
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
     public string GenerateAccessToken(UserEntity user)
     {
         var jwtConfig = _config.GetSection("Jwt");
         DateTime expiration = DateTime.UtcNow.AddMinutes(int.Parse(jwtConfig["TokenExpiryMinutes"]!));
 
-        // Create claims. Notice how we include a role claim based on the user's properties.
         // JwtRegisteredClaimNames are standardized JWT claims per the JWT spec
         // Whereas ClaimTypes are Microsoft-defined claims used within ASP.NET Core authentication and identity.
+
+        // Creating claims. we include a role claim based on the user's properties.
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
@@ -44,6 +54,13 @@ public class TokenService(IConfiguration configuration)
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    ///     Extracts the principal from a jwt token (even if it's expired) and returns it
+    ///     Used for refreshing tokens
+    /// </summary>
+    /// <param name="jwtToken"></param>
+    /// <param name="validateLifetime"></param>
+    /// <returns></returns>
     public ClaimsPrincipal ExtractPrincipalFromToken(string jwtToken, bool validateLifetime = true)
     {
         var jwtConfig = _config.GetSection("Jwt");
@@ -66,7 +83,14 @@ public class TokenService(IConfiguration configuration)
         return principal;
     }
 
-
+    /// <summary>
+    ///     Generates a hashed salted refresh token
+    ///     Returns an entity to be stored in the database and the raw generated token
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="salt"></param>
+    /// <param name="refreshToken"></param>
+    /// <returns></returns>
     public RefreshTokenEntity GenerateRefreshToken(int userId, string salt, out string refreshToken)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
@@ -80,7 +104,13 @@ public class TokenService(IConfiguration configuration)
 
     }
 
-
+    /// <summary>
+    ///     Generates a hashed unsalted verification token
+    ///     Returns an entity to be stored in the database and the raw generated token
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="verificationTokens"></param>
+    /// <returns></returns>
     public VerificationTokenEntity GenerateVerificationToken(int userId, out string verificationTokens)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
@@ -94,7 +124,13 @@ public class TokenService(IConfiguration configuration)
 
     }
 
-
+    /// <summary>
+    ///     Generates a hashed unsalted password reset token
+    ///     Returns an entity to be stored in the database and the raw generated token 
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="passwordResetToken"></param>
+    /// <returns></returns>
     public PasswordResetTokenEntity GeneratePasswordResetToken(int userId, out string passwordResetToken)
     {
         string generatedToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));

@@ -4,10 +4,14 @@ using SyncoraBackend.interfaces;
 using SyncoraBackend.Models.Common;
 
 namespace SyncoraBackend.Repositories;
-
-public class CloudinaryImageRepository(Cloudinary cloudinary) : IImagesRepository
+/// <summary>
+///    Implements the IImagesRepository interface to use cloudinary to upload images
+/// </summary>
+/// <param name="cloudinary"></param>
+public class CloudinaryImageRepository(Cloudinary cloudinary, IConfiguration configuration) : IImagesRepository
 {
     private readonly Cloudinary _cloudinary = cloudinary;
+    private readonly IConfiguration _configuration = configuration;
     public Task<string> AddPhotoAsync(IFormFile file)
     {
         var uploadParams = new ImageUploadParams()
@@ -43,6 +47,7 @@ public class CloudinaryImageRepository(Cloudinary cloudinary) : IImagesRepositor
 
     public bool ValidateUrlString(string url)
     {
-        return url.StartsWith("http://res.cloudinary.com/dpo5aj891/image", StringComparison.OrdinalIgnoreCase);
+        string cloudname = _configuration["CloudinaryConfig:CloudName"]!;
+        return url.StartsWith($"http://res.cloudinary.com/{cloudname}/image", StringComparison.OrdinalIgnoreCase);
     }
 }

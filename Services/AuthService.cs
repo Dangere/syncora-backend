@@ -12,7 +12,16 @@ using System.Net;
 
 
 namespace SyncoraBackend.Services;
-
+/// <summary>
+///     Auth services used to manage authentication and token generation and verification
+/// </summary>
+/// <param name="mapper"></param>
+/// <param name="dbContext"></param>
+/// <param name="tokenService"></param>
+/// <param name="emailService"></param>
+/// <param name="configuration"></param>
+/// <param name="clientSyncService"></param>
+/// <param name="logger"></param>
 public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenService tokenService, EmailService emailService, IConfiguration configuration
 , ClientSyncService clientSyncService, ILogger<AuthService> logger)
 {
@@ -26,12 +35,6 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
     private readonly ILogger<AuthService> _logger = logger;
 
 
-    // You should NOT create an access token from a username/password request.
-    // Username/password requests aren't authenticated and are vulnerable to impersonation and phishing attacks.
-    // Access tokens should only be created using an OpenID Connect flow or an OAuth standard flow.
-    // Deviating from these standards can result in an insecure app.
-
-    // We are ignoring this for the sake of simplicity until we implement the OpenID Connect flow or OAuth standard flow.
     public async Task<Result<AuthenticationResponseDTO>> LoginWithEmailAndPassword(string email, string password)
     {
         UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
@@ -55,7 +58,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
-
+    /// <summary>
+    ///     Registers a user with email and password if the email and username are available
+    ///     And sends them a verification email
+    /// </summary>
+    /// <param name="registerRequest"></param>
+    /// <param name="verifyUrl"></param>
+    /// <returns></returns>
     public async Task<Result<AuthenticationResponseDTO>> RegisterWithEmailAndPassword(RegisterRequestDTO registerRequest, string verifyUrl)
     {
         // Validate availability of email and username
@@ -96,7 +105,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         _ = await SendVerificationEmail(user.Id, verifyUrl);
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
-
+    /// <summary>
+    ///     Takes in a google id token and validates it using the google api and returns the user if it exists
+    /// </summary>
+    /// <param name="idToken"></param>
+    /// <returns></returns>
     public async Task<Result<AuthenticationResponseDTO>> LoginWithGoogle(string idToken)
     {
         var jwtValidation = _config.GetSection("GoogleJWTValidation");
@@ -131,7 +144,12 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         AuthenticationResponseDTO authenticationResponse = new(new(AccessToken: accessToken, RefreshToken: refreshToken), _mapper.Map<UserDTO>(user), user.IsVerified, _mapper.Map<UserPreferencesDTO>(user.Preferences));
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
-
+    /// <summary>
+    ///     Takes in a google id token and validates it using the google api
+    ///     If the email and username are available creates a new user that is already verified
+    /// </summary>
+    /// <param name="registerWithGoogleRequest"></param>
+    /// <returns></returns>
     public async Task<Result<AuthenticationResponseDTO>> RegisterWithGoogle(RegisterWithGoogleRequestDTO registerWithGoogleRequest)
     {
         var jwtValidation = _config.GetSection("GoogleJWTValidation");
@@ -151,8 +169,6 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<AuthenticationResponseDTO>.Error(e.Message, ErrorCodes.INVALID_GOOGLE_TOKEN);
         }
 
-        // TODO: Make sure to provide a way for a user to restore their account if someone already took it or they created it using manual registration
-        // Validate availability of email and username
         UserEntity? userWithSameEmailOrUsername = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, payload.Email) || EF.Functions.ILike(u.Username, registerWithGoogleRequest.Username));
         if (userWithSameEmailOrUsername != null)
         {
@@ -189,7 +205,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<AuthenticationResponseDTO>.Success(authenticationResponse);
     }
 
-    // Remember to use stricter rate limiting in controllers
+    /// <summary>
+    ///     Takes in a user id and the base url of the website and
+    ///     Sends a verification email containing a url with the raw verification token to the user if they're not already verified
+    /// </summary>
+    /// <param name="userId"></param>
+    /// <param name="verifyUrl"></param>
+    /// <returns></returns>
     public async Task<Result<string>> SendVerificationEmail(int userId, string verifyUrl)
     {
         UserEntity? user = await _dbContext.Users.FindAsync(userId);
@@ -217,6 +239,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<string>.Success("Verification email sent.");
     }
 
+    /// <summary>
+    ///     Confirms the verification token and marks the user as verified
+    /// </summary>
+    /// <param name="verificationToken"></param>
+    /// <returns></returns>
     public async Task<Result<string>> ConfirmVerificationEmail(string verificationToken)
     {
         string verificationTokenHash = Hashing.HashToken(verificationToken, null);
@@ -240,9 +267,6 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
             await _dbContext.VerificationTokens.Where(t => t.UserId == user.Id && !t.IsConsumed).ExecuteUpdateAsync(setters => setters.SetProperty(b => b.IsConsumed, true));
 
-
-            // Commit transaction if all commands succeed, transaction will auto-rollback
-            // when disposed if either commands fails
             await transaction.CommitAsync();
         }
         catch (Exception e)
@@ -257,6 +281,12 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<string>.Success("User verified.");
     }
 
+    /// <summary>
+    ///     Refreshes the access token using the refresh token
+    /// </summary>
+    /// <param name="expiredAccessToken"></param>
+    /// <param name="refreshToken"></param>
+    /// <returns> A result containing the new access token </returns>
     public async Task<Result<TokensDTO>> RefreshToken(string expiredAccessToken, string refreshToken)
     {
         ClaimsPrincipal claimsFromExpiredToken;
@@ -307,7 +337,13 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
         return Result<bool>.Success(verified ?? false);
     }
 
-    // Remember to use stricter rate limiting in controllers
+    /// <summary>
+    ///     Takes in a email and the url of the password reset page and
+    ///     Sends a password reset email containing the url with the raw password reset token to the user
+    /// </summary>
+    /// <param name="email"></param>
+    /// <param name="passwordResetPageUrl"></param>
+    /// <returns></returns>
     public async Task<Result<string>> SendPasswordResetEmail(string email, string passwordResetPageUrl)
     {
         UserEntity? user = await _dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
@@ -331,7 +367,11 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         return Result<string>.Success("Password reset email sent.");
     }
-
+    /// <summary>
+    ///     Checks if the password reset token is valid
+    /// </summary>
+    /// <param name="passwordResetToken"></param>
+    /// <returns></returns>
     public async Task<Result<string>> ValidatePasswordResetToken(string passwordResetToken)
     {
         // Get hashed token
@@ -348,7 +388,12 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
 
         return Result<string>.Success("Password reset token is valid.");
     }
-
+    /// <summary>
+    ///     Updates the password of the user using the password reset token
+    /// </summary>
+    /// <param name="passwordResetToken"></param>
+    /// <param name="newPassword"></param>
+    /// <returns></returns>
     public async Task<Result<string>> UpdateUserPassword(string passwordResetToken, string newPassword)
     {
         // Get hashed token

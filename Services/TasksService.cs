@@ -19,7 +19,7 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
     private readonly UserRequestContext _userRequestContext = userRequestContext;
 
-    public async Task<Result<List<TaskDTO>>> GetTasks(int groupId, DateTime? sinceUtc = null)
+    public async Task<Result<List<TaskDTO>>> GetTasks(int groupId)
     {
 
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.Tasks.Where(t => t.DeletedAt == null)).Include(g => g.GroupMembers).ThenInclude(m => m.User).SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null);
@@ -33,16 +33,8 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         }
 
         List<TaskDTO> tasksDTO;
-        if (sinceUtc != null)
-        {
-            tasksDTO = groupEntity.Tasks.OrderBy(t => t.CreationDate).Where(t => t.LastModifiedDate > sinceUtc).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
-        }
-        else
-        {
-            tasksDTO = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
 
-        }
-
+        tasksDTO = groupEntity.Tasks.OrderBy(t => t.CreationDate).Select(t => _mapper.Map<TaskDTO>(t)).ToList();
 
 
         return Result<List<TaskDTO>>.Success(tasksDTO);
@@ -66,7 +58,15 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<TaskDTO>.Success(_mapper.Map<TaskDTO>(taskEntity));
     }
 
-    // TODO(DONE): Change it so group members can complete tasks using this method or make a new method designed for that 
+    /// <summary>
+    ///     Updates a task with new details. Only the group owner can modify these details
+    ///     Returns an error if the task details are the same
+    ///         Also pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="taskId"></param>
+    /// <param name="groupId"></param>
+    /// <param name="updatedTaskDTO"></param>
+    /// <returns></returns>
     public async Task<Result<string>> UpdateTask(int taskId, int groupId, UpdateTaskDetailsDTO updatedTaskDTO)
     {
 
@@ -92,18 +92,11 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
             return Result<string>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status403Forbidden);
         }
 
+        if (updatedTaskDTO.Title == taskEntity.Title && updatedTaskDTO.Description == taskEntity.Description)
+            return Result<string>.Error("Task details are the same.", errorCode: ErrorCodes.TASK_DETAILS_UNCHANGED);
+
         taskEntity.Title = updatedTaskDTO.Title ?? taskEntity.Title;
         taskEntity.Description = updatedTaskDTO.Description ?? taskEntity.Description;
-
-        // if (updatedTaskDTO.Completed != null)
-        // {
-        //     // Im here realizing that this is not the best way to do this
-        //     // We are basically checking twice if the task is completed as a bool and as a user id when we can only use the user id
-        //     // taskEntity.Completed = updatedTaskDTO.Completed ?? taskEntity.Completed;
-        //     taskEntity.CompletedById = _userRequestContext.UserId;
-        // }
-
-
 
         if (updatedTaskDTO.Title != null || updatedTaskDTO.Description != null)
             taskEntity.LastModifiedDate = DateTime.UtcNow;
@@ -113,7 +106,13 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
 
         return Result<string>.Success("Task updated.");
     }
-
+    /// <summary>
+    ///     Deletes a task. Only the group owner can delete tasks
+    ///     Also pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="taskId"></param>
+    /// <param name="groupId"></param>
+    /// <returns></returns>
     public async Task<Result<string>> DeleteTask(int taskId, int groupId)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
@@ -143,7 +142,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Task deleted.");
     }
 
-    // Assigns a list of users to a task
+    /// <summary>
+    ///     Assigns a task to a list of users using user ids. Only the group owner can assign tasks
+    ///     Pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="taskId"></param>
+    /// <param name="groupId"></param>
+    /// <param name="userIdsToAssign"></param>
+    /// <returns></returns>
     public async Task<Result<string>> AssignTaskTo(int taskId, int groupId, int[] userIdsToAssign)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
@@ -189,6 +195,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Users assigned.");
     }
     // Directly sets a list of users to be assigned to a task
+    /// <summary>
+    ///     Sets a list of users to be assigned to a task overriding previous assignments. Only the group owner can assign tasks
+    ///     Pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="taskId"></param>
+    /// <param name="groupId"></param>
+    /// <param name="assignedUsers"></param>
+    /// <returns></returns>
     public async Task<Result<string>> SetAssignTaskToUsers(int taskId, int groupId, int[] assignedUsers)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
@@ -235,6 +249,14 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Users set assigned.");
     }
 
+    /// <summary>
+    ///     Marks a task for a user. Only the assigned users can mark tasks or the owner
+    ///     Pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="taskId"></param>
+    /// <param name="groupId"></param>
+    /// <param name="isCompleted"></param>
+    /// <returns></returns>
     public async Task<Result<string>> MarkTaskForUser(int taskId, int groupId, bool isCompleted)
     {
         GroupEntity? groupEntity = await _dbContext.Groups.Include(g => g.GroupMembers.Where(m => m.KickedAt == null)).AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.DeletedAt == null && (g.OwnerUserId == _userRequestContext.UserId || g.GroupMembers.Any(m => m.UserId == _userRequestContext.UserId)));
@@ -263,12 +285,15 @@ public class TasksService(IMapper mapper, SyncoraDbContext dbContext, ClientSync
         return Result<string>.Success("Task marked.");
     }
 
+    /// <summary>
+    ///     Creates a new task. Only the group owner can create tasks
+    ///     Pushes a sync payload to all connected clients on success
+    /// </summary>
+    /// <param name="newTaskDTO"></param>
+    /// <param name="groupId"></param>
+    /// <returns></returns>
     public async Task<Result<TaskDTO>> CreateTask(CreateTaskDTO newTaskDTO, int groupId)
     {
-        Console.WriteLine(_userRequestContext.UserId);
-        Console.WriteLine(_userRequestContext.DeviceId);
-
-
         GroupEntity? groupEntity = await _dbContext.Groups.AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId && g.OwnerUserId == _userRequestContext.UserId && g.DeletedAt == null);
         if (groupEntity == null)
             return Result<TaskDTO>.Error("Group does not exist.", ErrorCodes.GROUP_NOT_FOUND, StatusCodes.Status404NotFound);

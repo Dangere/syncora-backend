@@ -15,7 +15,10 @@ public class ImagesService(IImagesRepository imagesRepository, UserRequestContex
     private readonly ILogger<ImagesService> _logger = logger;
 
 
-
+    /// <summary>
+    ///     Generates upload signature for singed uploads made by the client
+    /// </summary>
+    /// <returns></returns>
     public async Task<Result<UploadSignature>> GenerateUploadSignature()
     {
         try
@@ -49,7 +52,11 @@ public class ImagesService(IImagesRepository imagesRepository, UserRequestContex
         }
     }
 
-
+    /// <summary>
+    ///     Checks if the image url is valid and issued by the image repository 
+    /// </summary>
+    /// <param name="url"></param>
+    /// <returns></returns>
     public async Task<Result<bool>> ValidateUrlString(string url)
     {
         try

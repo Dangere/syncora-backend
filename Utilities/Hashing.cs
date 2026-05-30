@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
 namespace SyncoraBackend.Utilities;
 
+/// <summary>
+///     Hashing class used to hash passwords
+/// </summary>
 public static class Hashing
 {
     // OWASP recommended iterations for PBKDF2-SHA256

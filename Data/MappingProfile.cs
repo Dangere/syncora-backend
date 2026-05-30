@@ -6,7 +6,7 @@ using SyncoraBackend.Models.DTOs.Groups;
 using SyncoraBackend.Enums;
 using SyncoraBackend.Models.DTOs.Report;
 
-namespace SyncoraBackend.Middleware;
+namespace SyncoraBackend.Data;
 
 public class MappingProfile : Profile
 {

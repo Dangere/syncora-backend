@@ -11,7 +11,12 @@ using SyncoraBackend.Utilities;
 
 namespace SyncoraBackend.Services;
 
-
+/// <summary>
+///     Admin services used to manage users by admins only
+/// </summary>
+/// <param name="dbContext"></param>
+/// <param name="userRequestContext"></param>
+/// <param name="logger"></param>
 public class AdminServices(SyncoraDbContext dbContext, UserRequestContext userRequestContext, ILogger<AdminServices> logger)
 {
     private readonly SyncoraDbContext _dbContext = dbContext;

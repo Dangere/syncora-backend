@@ -31,7 +31,13 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
         return new Result<UserDTO>(_mapper.Map<UserDTO>(user));
     }
-
+    /// <summary>
+    ///     Updates the user profile picture
+    ///     Returns an error if the image URL is invalid 
+    ///     Pushes a sync payload to all connected clients
+    /// </summary>
+    /// <param name="imageUrl"></param>
+    /// <returns></returns>
     public async Task<Result<string>> UpdateUserProfilePicture(string imageUrl)
     {
 
@@ -55,7 +61,13 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
 
         return Result<string>.Success("Profile picture updated.");
     }
-
+    /// <summary>
+    ///     Updates the user profile
+    ///     Returns an error if the user details are the same or if the username is already in use
+    ///     Pushes a sync payload to all connected clients
+    /// </summary>
+    /// <param name="updateUserProfileDTO"></param>
+    /// <returns></returns>
     public async Task<Result<string>> UpdateUserProfile(UpdateUserProfileDTO updateUserProfileDTO)
     {
         UserEntity? user = await _dbContext.Users.Include(u => u.OwnedGroups).Include(u => u.GroupMemberships).FirstAsync(u => u.Id == _userRequestContext.UserId);
@@ -92,7 +104,7 @@ public class UsersService(ImagesService imagesService, ClientSyncService clientS
     }
 
     /// <summary>
-    /// Returns a list of user ids related (in a group with the user) to the user
+    ///     Returns a list of user ids related (in a group with the user) to the user
     /// </summary>
     /// <param name="userId"></param>
     /// <returns></returns>
