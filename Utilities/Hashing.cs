@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 namespace SyncoraBackend.Utilities;
 
 /// <summary>
-///     Hashing class used to hash passwords
+///     Hashing class used to hash passwords and tokens
 /// </summary>
 public static class Hashing
 {
