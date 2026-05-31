@@ -437,6 +437,8 @@ public class AuthService(IMapper mapper, SyncoraDbContext dbContext, TokenServic
             return Result<string>.Error("Failed to update user password.", ErrorCodes.INTERNAL_ERROR, StatusCodes.Status500InternalServerError);
         }
 
+        await _clientSyncService.NotifyPasswordChangedToUser(user.Id);
+
         return Result<string>.Success("Password updated.");
     }
 }

@@ -156,6 +156,13 @@ public class ClientSyncService(SyncoraDbContext dbContext, IHubContext<SyncHub> 
 
 
 
+    // This method is used to notify a user that their password has been changed and kick them out
+    public async Task NotifyPasswordChangedToUser(int userId)
+    {
+        _logger.LogInformation("Sending password changed update");
+        await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceivePasswordChanged", true);
+    }
+
 
     // This should get called whenever a user gets added to a group before the sync is triggered
     public async Task AddUserToHubGroup(int userId, int groupId)
