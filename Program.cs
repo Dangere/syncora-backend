@@ -70,6 +70,12 @@ builder.Services.AddDbContext<SyncoraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "PostgreSQL-Check",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: ["db", "postgres"]);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(jwtOptions =>
 {
@@ -244,6 +250,20 @@ app.MapHub<SyncHub>("/hubs/notification");
 
 app.MapGet("/hello", () => "Hello World!");
 
+// app.MapGet("/health", async (SyncoraDbContext dbContext)
+// =>
+// {
+//     try
+//     {
+//         await dbContext.Database.ExecuteSqlRawAsync("SELECT 1");
+//     }
+//     catch
+//     {
+//         return Results.BadRequest();
+//     }
+//     return Results.Ok();
+// });
+app.MapHealthChecks("/api/health");
 
 Console.WriteLine($"\n Running with connection string: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 app.Run();
