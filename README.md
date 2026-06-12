@@ -61,7 +61,8 @@ dotnet ef database update
 ## Deployment
 
 ### CI/CD GitHub Actions
-On every push to `main`, the workflow in `.github/workflows`, injects production secrets, and deploys to the host via FTP. No manual steps required after initial secrets setup.
+1. On every push to `main`, the workflow in `.github/workflows`, injects production secrets, and deploys to the host via FTP. No manual steps required after initial secrets setup.
+2. A Cron job workflow `health-check.yaml` runs every 3 days to call the backend's health which keeps supabase alive.
 
 **Required GitHub secrets:**
 
