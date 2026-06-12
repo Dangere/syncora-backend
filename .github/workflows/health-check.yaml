@@ -1,0 +1,11 @@
+name: Health Check to Keep Alive
+on:
+  schedule:
+    - cron: '0 12 */3 * *'  
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        run: curl -f https://syncoratasks.runasp.net/api/health
